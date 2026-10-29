@@ -1,0 +1,340 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "kwki_sharedsharepointonline_7c2a1"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_office365": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "kwki_sharedoffice365_5f9d3"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "undefined",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "Saat_kontrak_diubah": {
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetOnUpdatedItems"
+            },
+            "parameters": {
+              "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+              "table": "0288609d-15ba-4e92-8afb-a2e4d491dc3a"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "recurrence": {
+            "interval": 1,
+            "frequency": "Minute"
+          },
+          "splitOn": "@triggerOutputs()?['body/value']",
+          "metadata": {
+            "operationMetadataId": "4c73a069-0453-4ce5-b351-d353b9d0eeb0"
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
+          },
+          "type": "OpenApiConnection"
+        }
+      },
+      "actions": {
+        "Riwayat_versi": {
+          "runAfter": {},
+          "metadata": {
+            "operationMetadataId": "998677e6-f086-4ed4-a2f1-c564802af73a"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "HttpRequest"
+            },
+            "parameters": {
+              "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+              "parameters/method": "GET",
+              "parameters/uri": "_api/web/lists(guid'0288609d-15ba-4e92-8afb-a2e4d491dc3a')/items(@{triggerOutputs()?['body/ID']})/versions?$select=VersionId,VersionLabel,Status,Editor",
+              "parameters/headers": {
+                "Accept": "application/json;odata=nometadata"
+              }
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Perubahan": {
+          "runAfter": {
+            "Riwayat_versi": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": {
+            "dari": "@{if(greater(length(body('Riwayat_versi')?['value']),1),coalesce(reverse(sort(body('Riwayat_versi')?['value'],'VersionId'))?[1]?['Status'],''),'')}",
+            "ke": "@{triggerOutputs()?['body/Status/Value']}",
+            "oleh": "@{toLower(coalesce(triggerOutputs()?['body/Editor/Email'],''))}",
+            "olehNama": "@{coalesce(triggerOutputs()?['body/Editor/DisplayName'],'(tidak diketahui)')}"
+          }
+        },
+        "Status_berubah": {
+          "runAfter": {
+            "Perubahan": [
+              "Succeeded"
+            ]
+          },
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "not": {
+                  "equals": [
+                    "@outputs('Perubahan')?['dari']",
+                    ""
+                  ]
+                }
+              },
+              {
+                "not": {
+                  "equals": [
+                    "@outputs('Perubahan')?['dari']",
+                    "@outputs('Perubahan')?['ke']"
+                  ]
+                }
+              }
+            ]
+          },
+          "actions": {
+            "Peran_pengubah": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "31d73171-2bea-4d39-b750-12f8b6e546cb"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "GetItems"
+                },
+                "parameters": {
+                  "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+                  "table": "8ddfa9ba-0fa4-407a-8017-78d4c41c1fdb",
+                  "$top": 500,
+                  "$filter": "Email eq '@{outputs('Perubahan')?['oleh']}' and Aktif eq 1"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Penilaian": {
+              "runAfter": {
+                "Peran_pengubah": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": {
+                "sah": "@contains('|Diajukan>Review Legal|Diajukan>Ditolak|Diajukan>Dibatalkan|Review Legal>Proses Tanda Tangan|Review Legal>Perlu Revisi|Review Legal>Ditolak|Perlu Revisi>Review Legal|Perlu Revisi>Dibatalkan|Proses Tanda Tangan>Aktif|Proses Tanda Tangan>Review Legal|Aktif>Berakhir|',concat('|',outputs('Perubahan')?['dari'],'>',outputs('Perubahan')?['ke'],'|'))",
+                "khususLegal": "@contains('|Diajukan>Review Legal|Diajukan>Ditolak|Review Legal>Proses Tanda Tangan|Review Legal>Perlu Revisi|Review Legal>Ditolak|Proses Tanda Tangan>Aktif|Proses Tanda Tangan>Review Legal|Aktif>Berakhir|',concat('|',outputs('Perubahan')?['dari'],'>',outputs('Perubahan')?['ke'],'|'))",
+                "pelakuLegal": "@or(equals(outputs('Perubahan')?['oleh'],'adminapp@waskitainfrastruktur.co.id'),contains('|Admin|Legal|',concat('|',coalesce(first(body('Peran_pengubah')?['value'])?['Peran']?['Value'],'-'),'|')))",
+                "peran": "@{coalesce(first(body('Peran_pengubah')?['value'])?['Peran']?['Value'],if(equals(outputs('Perubahan')?['oleh'],'adminapp@waskitainfrastruktur.co.id'),'Admin','tidak terdaftar'))}"
+              }
+            },
+            "Melanggar": {
+              "runAfter": {
+                "Penilaian": [
+                  "Succeeded"
+                ]
+              },
+              "type": "If",
+              "expression": {
+                "or": [
+                  {
+                    "equals": [
+                      "@outputs('Penilaian')?['sah']",
+                      false
+                    ]
+                  },
+                  {
+                    "and": [
+                      {
+                        "equals": [
+                          "@outputs('Penilaian')?['khususLegal']",
+                          true
+                        ]
+                      },
+                      {
+                        "equals": [
+                          "@outputs('Penilaian')?['pelakuLegal']",
+                          false
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Ambil_mode_uji": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "879ad1e2-67ad-4e25-863f-5fed748e2daf"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "connectionName": "shared_sharepointonline",
+                      "operationId": "GetItems"
+                    },
+                    "parameters": {
+                      "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+                      "table": "2b89317d-807b-4b1c-96e5-52640a58708e",
+                      "$top": 1,
+                      "$filter": "Title eq 'emailUji'",
+                      "$orderby": "ID asc"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                },
+                "Email_uji": {
+                  "runAfter": {
+                    "Ambil_mode_uji": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Compose",
+                  "inputs": "@trim(replace(string(coalesce(first(body('Ambil_mode_uji')?['value'])?['NilaiJson'],'')),'\"',''))"
+                },
+                "Ambil_admin": {
+                  "runAfter": {
+                    "Email_uji": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "c94398d0-cf77-4699-b0c7-24ff1c0c6241"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "connectionName": "shared_sharepointonline",
+                      "operationId": "GetItems"
+                    },
+                    "parameters": {
+                      "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+                      "table": "8ddfa9ba-0fa4-407a-8017-78d4c41c1fdb",
+                      "$top": 500,
+                      "$filter": "Aktif eq 1 and Peran eq 'Admin'"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                },
+                "Pilih_admin": {
+                  "runAfter": {
+                    "Ambil_admin": [
+                      "Succeeded"
+                    ]
+                  },
+                  "type": "Select",
+                  "inputs": {
+                    "from": "@body('Ambil_admin')?['value']",
+                    "select": "@item()?['Email']"
+                  }
+                },
+                "Catat_peringatan": {
+                  "runAfter": {
+                    "Pilih_admin": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "f71f9a00-eef9-4a96-88a6-87c8ef4302f9"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "connectionName": "shared_sharepointonline",
+                      "operationId": "PostItem"
+                    },
+                    "parameters": {
+                      "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+                      "table": "47b3dcbf-ff54-45ca-b05d-18d922ca2e24",
+                      "item/Title": "Perubahan",
+                      "item/KontrakId": "@triggerOutputs()?['body/ID']",
+                      "item/Pesan": "Peringatan sistem: status diubah dari @{outputs('Perubahan')?['dari']} ke @{outputs('Perubahan')?['ke']} oleh @{outputs('Perubahan')?['olehNama']} (@{outputs('Penilaian')?['peran']}) @{if(outputs('Penilaian')?['sah'],'tanpa hak Legal','di luar alur resmi')}. Periksa riwayat versi item ini di SharePoint.",
+                      "item/StatusDari": "@outputs('Perubahan')?['dari']",
+                      "item/StatusKe": "@outputs('Perubahan')?['ke']",
+                      "item/OlehEmail": "sistem",
+                      "item/OlehNama": "Pengawas otomatis"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                },
+                "Kabari_admin": {
+                  "runAfter": {
+                    "Catat_peringatan": [
+                      "Succeeded",
+                      "Failed"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "fd878b8e-fc75-486c-8b14-a19eab77eea6"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                      "connectionName": "shared_office365",
+                      "operationId": "SendEmailV2"
+                    },
+                    "parameters": {
+                      "emailMessage/To": "@{if(not(empty(outputs('Email_uji'))),outputs('Email_uji'),join(union(body('Pilih_admin'),createArray('adminapp@waskitainfrastruktur.co.id')),';'))}",
+                      "emailMessage/Subject": "@{if(empty(outputs('Email_uji')),'','[UJI] ')}[WiCon] Perubahan status di luar alur: @{triggerOutputs()?['body/NomorPengajuan']}",
+                      "emailMessage/Body": "<!DOCTYPE html><html lang=\"id\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light only\"><meta name=\"supported-color-schemes\" content=\"light only\"><title>Status kontrak berubah di luar alur</title><!--[if mso]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]--><style>body{margin:0;padding:0;width:100%!important;-webkit-text-size-adjust:100%;}table{border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;}a{color:#0a7f79;}@media only screen and (max-width:640px){.lebar{width:100%!important;}}</style></head><body style=\"margin:0;padding:0;background-color:#f2f5f9;\" bgcolor=\"#f2f5f9\"><div style=\"display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#f2f5f9;\">Status @{outputs('Perubahan')?['dari']} → @{outputs('Perubahan')?['ke']} oleh @{outputs('Perubahan')?['olehNama']}.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" bgcolor=\"#f2f5f9\" style=\"background-color:#f2f5f9;\"><tr><td align=\"center\" style=\"padding:24px 12px;\"><table role=\"presentation\" class=\"lebar\" width=\"640\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"width:640px;max-width:640px;\"><tr><td bgcolor=\"#0b1f3a\" style=\"background-color:#0b1f3a;border-radius:14px 14px 0 0;padding:22px 32px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td valign=\"middle\" width=\"44\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"40\" height=\"40\" align=\"center\" valign=\"middle\" bgcolor=\"#0a7f79\" style=\"background-color:#0a7f79;border-radius:10px;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:40px;font-weight:700;color:#ffffff;\">W</td></tr></table></td><td valign=\"middle\" style=\"padding-left:12px;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:26px;color:#ffffff;font-weight:700;\">WiCon<div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:600;color:#9db4d3;letter-spacing:1.2px;text-transform:uppercase;\">Contract Management &amp; Dashboard</div></td></tr></table></td></tr><tr><td height=\"5\" bgcolor=\"#b91c1c\" style=\"background-color:#b91c1c;font-size:0;line-height:0;\">&nbsp;</td></tr><tr><td bgcolor=\"#ffffff\" style=\"background-color:#ffffff;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"padding:28px 32px 0 32px;\"><div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;font-weight:800;color:#b91c1c;text-transform:uppercase;letter-spacing:1px;\">Pengawas status</div><div style=\"font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:34px;color:#0b1f3a;font-weight:700;padding-top:4px;\">Status kontrak berubah di luar alur</div></td></tr><tr><td style=\"padding:14px 32px 0 32px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1f2a37;\">Ada perubahan status yang tidak sesuai alur aplikasi. Kemungkinan diubah langsung dari SharePoint. Periksa lalu pulihkan dari riwayat versi bila memang keliru.</td></tr><tr><td style=\"padding:18px 32px 0 32px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"150\" style=\"padding:8px 12px 8px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;font-weight:700;text-transform:uppercase;\">Kontrak</td><td style=\"padding:8px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;color:#1f2a37;\"><strong>@{replace(replace(replace(string(coalesce(triggerOutputs()?['body/Title'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')}</strong><br><span style=\"font-family:Consolas,'Courier New',monospace;font-size:12px;color:#64748b;\">@{triggerOutputs()?['body/NomorPengajuan']}</span></td></tr><tr><td width=\"150\" style=\"padding:8px 12px 8px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;font-weight:700;text-transform:uppercase;\">Perubahan</td><td style=\"padding:8px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;color:#1f2a37;\"><strong>@{outputs('Perubahan')?['dari']}</strong> → <strong style=\"color:#b91c1c;\">@{outputs('Perubahan')?['ke']}</strong></td></tr><tr><td width=\"150\" style=\"padding:8px 12px 8px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;font-weight:700;text-transform:uppercase;\">Oleh</td><td style=\"padding:8px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;color:#1f2a37;\">@{replace(replace(replace(string(coalesce(outputs('Perubahan')?['olehNama'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')} (@{outputs('Penilaian')?['peran']})</td></tr><tr><td width=\"150\" style=\"padding:8px 12px 8px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;font-weight:700;text-transform:uppercase;\">Masalah</td><td style=\"padding:8px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;color:#1f2a37;\">@{if(outputs('Penilaian')?['sah'],'Langkah ini hanya boleh dilakukan Legal atau Admin.','Langkah ini tidak ada dalam alur resmi.')}</td></tr></table></td></tr><tr><td style=\"padding:26px 32px 8px 32px;\"><a href=\"https://wicon.waskitainfrastruktur.co.id/#/kontrak/@{triggerOutputs()?['body/ID']}\" target=\"_blank\" style=\"display:inline-block;background-color:#0a7f79;border:2px solid #0a7f79;color:#ffffff;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;font-weight:700;text-decoration:none;padding:10px 26px;border-radius:8px;\">Buka kontrak</a></td></tr><tr><td style=\"padding:18px 32px 28px 32px;\">&nbsp;</td></tr></table></td></tr><tr><td bgcolor=\"#f8fafc\" style=\"background-color:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 14px 14px;padding:16px 32px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;\">Email otomatis dari <strong>WiCon</strong>, PT Waskita Karya Infrastruktur. Mohon tidak membalas email ini. Waktu ditampilkan dalam WIB.</td></tr></table></td></tr></table></body></html>",
+                      "emailMessage/Importance": "High"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

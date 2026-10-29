@@ -1,0 +1,754 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "kwki_sharedsharepointonline_7c2a1"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_office365": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "kwki_sharedoffice365_5f9d3"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "undefined",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "Setiap_pagi": {
+          "recurrence": {
+            "frequency": "Day",
+            "interval": 1,
+            "schedule": {
+              "hours": [
+                "7"
+              ],
+              "minutes": [
+                0
+              ]
+            },
+            "timeZone": "SE Asia Standard Time"
+          },
+          "metadata": {
+            "operationMetadataId": "27d557fe-df1b-424a-9709-ec375585505b"
+          },
+          "type": "Recurrence"
+        }
+      },
+      "actions": {
+        "Tanggal_hari_ini": {
+          "runAfter": {},
+          "type": "Compose",
+          "inputs": "@formatDateTime(convertTimeZone(utcNow(),'UTC','SE Asia Standard Time'),'yyyy-MM-dd')"
+        },
+        "Ambil_pengaturan": {
+          "runAfter": {
+            "Tanggal_hari_ini": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "19c58dd2-287d-4460-a5a9-815e8f0a0b68"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems"
+            },
+            "parameters": {
+              "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+              "table": "2b89317d-807b-4b1c-96e5-52640a58708e",
+              "$top": 500,
+              "$orderby": "ID asc"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Baris_hariPeringatan": {
+          "runAfter": {
+            "Ambil_pengaturan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_pengaturan')?['value']",
+            "where": "@equals(trim(coalesce(item()?['Title'],'')),'hariPeringatan')"
+          }
+        },
+        "Baris_jaminanPeringatan": {
+          "runAfter": {
+            "Ambil_pengaturan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_pengaturan')?['value']",
+            "where": "@equals(trim(coalesce(item()?['Title'],'')),'jaminanPeringatan')"
+          }
+        },
+        "Baris_alamatGrupLegal": {
+          "runAfter": {
+            "Ambil_pengaturan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_pengaturan')?['value']",
+            "where": "@equals(trim(coalesce(item()?['Title'],'')),'alamatGrupLegal')"
+          }
+        },
+        "Baris_emailUji": {
+          "runAfter": {
+            "Ambil_pengaturan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_pengaturan')?['value']",
+            "where": "@equals(trim(coalesce(item()?['Title'],'')),'emailUji')"
+          }
+        },
+        "Nilai_hariPeringatan": {
+          "runAfter": {
+            "Baris_hariPeringatan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@json(if(empty(trim(coalesce(first(body('Baris_hariPeringatan'))?['NilaiJson'],''))),'[90,60,30,7,0]',trim(coalesce(first(body('Baris_hariPeringatan'))?['NilaiJson'],''))))"
+        },
+        "Periksa_hariPeringatan": {
+          "runAfter": {
+            "Nilai_hariPeringatan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@if(and(and(startsWith(string(outputs('Nilai_hariPeringatan')),'['),equals(length(split(string(outputs('Nilai_hariPeringatan')),'[')),2),empty(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(string(outputs('Nilai_hariPeringatan')),'0',''),'1',''),'2',''),'3',''),'4',''),'5',''),'6',''),'7',''),'8',''),'9',''),',',''),'.',''),'-',''),' ',''),'[',''),']',''))),greater(length(union(outputs('Nilai_hariPeringatan'),outputs('Nilai_hariPeringatan'))),0),lessOrEquals(length(union(outputs('Nilai_hariPeringatan'),outputs('Nilai_hariPeringatan'))),10),less(xpath(xml(json(concat('{\"r\":{\"t\":',string(outputs('Nilai_hariPeringatan')),'}}'))),'count(/r/t[not(number(.) = floor(number(.))) or number(.) < 0 or number(.) > 730])'),1)),union(outputs('Nilai_hariPeringatan'),outputs('Nilai_hariPeringatan')),null)"
+        },
+        "Nilai_jaminanPeringatan": {
+          "runAfter": {
+            "Baris_jaminanPeringatan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@json(if(empty(trim(coalesce(first(body('Baris_jaminanPeringatan'))?['NilaiJson'],''))),'[30,14,7]',trim(coalesce(first(body('Baris_jaminanPeringatan'))?['NilaiJson'],''))))"
+        },
+        "Periksa_jaminanPeringatan": {
+          "runAfter": {
+            "Nilai_jaminanPeringatan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@if(and(and(startsWith(string(outputs('Nilai_jaminanPeringatan')),'['),equals(length(split(string(outputs('Nilai_jaminanPeringatan')),'[')),2),empty(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(string(outputs('Nilai_jaminanPeringatan')),'0',''),'1',''),'2',''),'3',''),'4',''),'5',''),'6',''),'7',''),'8',''),'9',''),',',''),'.',''),'-',''),' ',''),'[',''),']',''))),greater(length(union(outputs('Nilai_jaminanPeringatan'),outputs('Nilai_jaminanPeringatan'))),0),lessOrEquals(length(union(outputs('Nilai_jaminanPeringatan'),outputs('Nilai_jaminanPeringatan'))),10),less(xpath(xml(json(concat('{\"r\":{\"t\":',string(outputs('Nilai_jaminanPeringatan')),'}}'))),'count(/r/t[not(number(.) = floor(number(.))) or number(.) < 0 or number(.) > 365])'),1)),union(outputs('Nilai_jaminanPeringatan'),outputs('Nilai_jaminanPeringatan')),null)"
+        },
+        "Nilai_alamatGrupLegal": {
+          "runAfter": {
+            "Baris_alamatGrupLegal": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@if(empty(trim(coalesce(first(body('Baris_alamatGrupLegal'))?['NilaiJson'],''))),'\"\"',trim(coalesce(first(body('Baris_alamatGrupLegal'))?['NilaiJson'],'')))"
+        },
+        "Periksa_alamatGrupLegal": {
+          "runAfter": {
+            "Nilai_alamatGrupLegal": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@if(and(startsWith(outputs('Nilai_alamatGrupLegal'),'\"'),endsWith(outputs('Nilai_alamatGrupLegal'),'\"'),greater(length(outputs('Nilai_alamatGrupLegal')),1),not(contains(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))),'\"')),not(contains(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))),'\\')),or(empty(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2)))))),and(equals(length(split(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),'@')),2),not(empty(first(split(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),'@')))),contains(substring(concat(last(split(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),'@')),'  '),1,max(0,sub(length(last(split(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),'@'))),2))),'.'),not(contains(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),' ')),not(contains(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),';')),not(contains(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),','))))),toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),null)"
+        },
+        "Pengaturan": {
+          "runAfter": {
+            "Periksa_hariPeringatan": [
+              "Succeeded",
+              "Failed",
+              "Skipped",
+              "TimedOut"
+            ],
+            "Periksa_jaminanPeringatan": [
+              "Succeeded",
+              "Failed",
+              "Skipped",
+              "TimedOut"
+            ],
+            "Periksa_alamatGrupLegal": [
+              "Succeeded",
+              "Failed",
+              "Skipped",
+              "TimedOut"
+            ]
+          },
+          "type": "Compose",
+          "inputs": {
+            "hariPeringatan": "@coalesce(actions('Periksa_hariPeringatan')?['outputs'],json('[90,60,30,7,0]'))",
+            "jaminanPeringatan": "@coalesce(actions('Periksa_jaminanPeringatan')?['outputs'],json('[30,14,7]'))",
+            "alamatGrupLegal": "@coalesce(actions('Periksa_alamatGrupLegal')?['outputs'],'')"
+          }
+        },
+        "Email_uji": {
+          "runAfter": {
+            "Pengaturan": [
+              "Succeeded"
+            ],
+            "Baris_emailUji": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@trim(replace(string(coalesce(first(body('Baris_emailUji'))?['NilaiJson'],'')),'\"',''))"
+        },
+        "Ambil_tim_legal": {
+          "runAfter": {
+            "Email_uji": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "48a462a0-fb86-45d0-9c27-542e004f3318"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems"
+            },
+            "parameters": {
+              "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+              "table": "8ddfa9ba-0fa4-407a-8017-78d4c41c1fdb",
+              "$top": 500,
+              "$filter": "Aktif eq 1 and (Peran eq 'Legal' or Peran eq 'Admin')"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Pilih_email_legal": {
+          "runAfter": {
+            "Ambil_tim_legal": [
+              "Succeeded"
+            ]
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@body('Ambil_tim_legal')?['value']",
+            "select": "@toLower(trim(coalesce(item()?['Email'],'')))"
+          }
+        },
+        "Email_legal_terisi": {
+          "runAfter": {
+            "Pilih_email_legal": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Pilih_email_legal')",
+            "where": "@not(empty(item()))"
+          }
+        },
+        "Email_tim_legal": {
+          "runAfter": {
+            "Email_legal_terisi": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@coalesce(if(empty(outputs('Email_uji')),null,outputs('Email_uji')),if(empty(outputs('Pengaturan')?['alamatGrupLegal']),null,outputs('Pengaturan')?['alamatGrupLegal']),if(empty(join(union(body('Email_legal_terisi'),body('Email_legal_terisi')),';')),null,join(union(body('Email_legal_terisi'),body('Email_legal_terisi')),';')),'adminapp@waskitainfrastruktur.co.id')"
+        },
+        "Ambil_kontrak_berakhir": {
+          "runAfter": {
+            "Email_tim_legal": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "285a50df-8a48-4df7-ad0a-6aeb98b514fa"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems"
+            },
+            "parameters": {
+              "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+              "table": "0288609d-15ba-4e92-8afb-a2e4d491dc3a",
+              "$top": 500,
+              "$filter": "Status eq 'Aktif' and Diarsipkan ne 1 and (BerakhirEfektif le '@{addDays(outputs('Tanggal_hari_ini'),max(outputs('Pengaturan')?['hariPeringatan']),'yyyy-MM-dd')}' or (BerakhirEfektif eq null and TanggalBerakhir le '@{addDays(outputs('Tanggal_hari_ini'),max(outputs('Pengaturan')?['hariPeringatan']),'yyyy-MM-dd')}'))",
+              "$orderby": "ID asc"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 5000
+            }
+          }
+        },
+        "Ambil_kontrak_masa": {
+          "runAfter": {
+            "Email_tim_legal": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "477bde22-2c1b-43ed-b9e4-a5d3eb37326c"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems"
+            },
+            "parameters": {
+              "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+              "table": "0288609d-15ba-4e92-8afb-a2e4d491dc3a",
+              "$top": 500,
+              "$filter": "Status eq 'Aktif' and Diarsipkan ne 1 and MasaPemberitahuanHari gt 0 and (BerakhirEfektif gt '@{addDays(outputs('Tanggal_hari_ini'),max(outputs('Pengaturan')?['hariPeringatan']),'yyyy-MM-dd')}' or (BerakhirEfektif eq null and TanggalBerakhir gt '@{addDays(outputs('Tanggal_hari_ini'),max(outputs('Pengaturan')?['hariPeringatan']),'yyyy-MM-dd')}'))",
+              "$orderby": "ID asc"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 5000
+            }
+          }
+        },
+        "Kontrak_dipantau": {
+          "runAfter": {
+            "Ambil_kontrak_berakhir": [
+              "Succeeded"
+            ],
+            "Ambil_kontrak_masa": [
+              "Succeeded",
+              "Failed",
+              "Skipped",
+              "TimedOut"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@union(body('Ambil_kontrak_berakhir')?['value'],coalesce(actions('Ambil_kontrak_masa')?['outputs']?['body']?['value'],json('[]')))",
+            "where": "@and(not(equals(coalesce(item()?['BerakhirEfektif'],item()?['TanggalBerakhir']),null)),not(and(equals(item()?['JenisKontrak']?['Value'],'Addendum / Amandemen'),not(equals(item()?['KontrakIndukId'],null)))))"
+          }
+        },
+        "Kontrak_dinilai": {
+          "runAfter": {
+            "Kontrak_dipantau": [
+              "Succeeded"
+            ]
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@body('Kontrak_dipantau')",
+            "select": "@addProperty(addProperty(item(),'AmbangKini',add(if(not(and(equals(item()?['PerpanjanganOtomatis'],true),not(equals(item()?['MasaPemberitahuanHari'],null)))),xpath(xml(json(concat('{\"r\":{\"t\":',string(outputs('Pengaturan')?['hariPeringatan']),'}}'))),concat('count(/r/t[. >= ',string(div(sub(ticks(convertTimeZone(coalesce(item()?['BerakhirEfektif'],item()?['TanggalBerakhir']),'UTC','SE Asia Standard Time','yyyy-MM-dd')),ticks(convertTimeZone(utcNow(),'UTC','SE Asia Standard Time','yyyy-MM-dd'))),864000000000)),'])')),0),if(and(not(equals(item()?['MasaPemberitahuanHari'],null)),or(equals(item()?['PerpanjanganOtomatis'],true),greater(int(formatNumber(coalesce(item()?['MasaPemberitahuanHari'],0),'0','en-US')),0))),xpath(xml(json(concat('{\"r\":{\"t\":',string(outputs('Pengaturan')?['hariPeringatan']),'}}'))),concat('count(/r/t[. >= ',string(sub(div(sub(ticks(convertTimeZone(coalesce(item()?['BerakhirEfektif'],item()?['TanggalBerakhir']),'UTC','SE Asia Standard Time','yyyy-MM-dd')),ticks(convertTimeZone(utcNow(),'UTC','SE Asia Standard Time','yyyy-MM-dd'))),864000000000),int(formatNumber(coalesce(item()?['MasaPemberitahuanHari'],0),'0','en-US')))),'])')),0))),'AmbangLalu',add(if(not(and(equals(item()?['PerpanjanganOtomatis'],true),not(equals(item()?['MasaPemberitahuanHari'],null)))),xpath(xml(json(concat('{\"r\":{\"t\":',string(outputs('Pengaturan')?['hariPeringatan']),'}}'))),concat('count(/r/t[. >= ',string(div(sub(ticks(convertTimeZone(coalesce(item()?['BerakhirEfektif'],item()?['TanggalBerakhir']),'UTC','SE Asia Standard Time','yyyy-MM-dd')),ticks(convertTimeZone(coalesce(item()?['PengingatTerakhir'],'1900-01-01T00:00:00Z'),'UTC','SE Asia Standard Time','yyyy-MM-dd'))),864000000000)),'])')),0),if(and(not(equals(item()?['MasaPemberitahuanHari'],null)),or(equals(item()?['PerpanjanganOtomatis'],true),greater(int(formatNumber(coalesce(item()?['MasaPemberitahuanHari'],0),'0','en-US')),0))),xpath(xml(json(concat('{\"r\":{\"t\":',string(outputs('Pengaturan')?['hariPeringatan']),'}}'))),concat('count(/r/t[. >= ',string(sub(div(sub(ticks(convertTimeZone(coalesce(item()?['BerakhirEfektif'],item()?['TanggalBerakhir']),'UTC','SE Asia Standard Time','yyyy-MM-dd')),ticks(convertTimeZone(coalesce(item()?['PengingatTerakhir'],'1900-01-01T00:00:00Z'),'UTC','SE Asia Standard Time','yyyy-MM-dd'))),864000000000),int(formatNumber(coalesce(item()?['MasaPemberitahuanHari'],0),'0','en-US')))),'])')),0)))"
+          }
+        },
+        "Kontrak_perlu_diingatkan": {
+          "runAfter": {
+            "Kontrak_dinilai": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Kontrak_dinilai')",
+            "where": "@greater(item()?['AmbangKini'],item()?['AmbangLalu'])"
+          }
+        },
+        "Untuk_setiap_kontrak": {
+          "runAfter": {
+            "Kontrak_perlu_diingatkan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach",
+          "foreach": "@body('Kontrak_perlu_diingatkan')",
+          "actions": {
+            "Jadwal_kontrak": {
+              "runAfter": {},
+              "type": "Compose",
+              "inputs": {
+                "akhir": "@coalesce(items('Untuk_setiap_kontrak')?['BerakhirEfektif'],items('Untuk_setiap_kontrak')?['TanggalBerakhir'])",
+                "otomatis": "@equals(items('Untuk_setiap_kontrak')?['PerpanjanganOtomatis'],true)",
+                "masa": "@if(not(equals(items('Untuk_setiap_kontrak')?['MasaPemberitahuanHari'],null)),int(formatNumber(coalesce(items('Untuk_setiap_kontrak')?['MasaPemberitahuanHari'],0),'0','en-US')),null)",
+                "batas": "@if(not(equals(items('Untuk_setiap_kontrak')?['MasaPemberitahuanHari'],null)),addDays(coalesce(items('Untuk_setiap_kontrak')?['BerakhirEfektif'],items('Untuk_setiap_kontrak')?['TanggalBerakhir']),mul(int(formatNumber(coalesce(items('Untuk_setiap_kontrak')?['MasaPemberitahuanHari'],0),'0','en-US')),-1)),null)",
+                "sisaAkhir": "@div(sub(ticks(convertTimeZone(coalesce(items('Untuk_setiap_kontrak')?['BerakhirEfektif'],items('Untuk_setiap_kontrak')?['TanggalBerakhir']),'UTC','SE Asia Standard Time','yyyy-MM-dd')),ticks(convertTimeZone(utcNow(),'UTC','SE Asia Standard Time','yyyy-MM-dd'))),864000000000)",
+                "fokusBatas": "@and(and(not(equals(items('Untuk_setiap_kontrak')?['MasaPemberitahuanHari'],null)),or(equals(items('Untuk_setiap_kontrak')?['PerpanjanganOtomatis'],true),greater(int(formatNumber(coalesce(items('Untuk_setiap_kontrak')?['MasaPemberitahuanHari'],0),'0','en-US')),0))),or(equals(items('Untuk_setiap_kontrak')?['PerpanjanganOtomatis'],true),greaterOrEquals(sub(div(sub(ticks(convertTimeZone(coalesce(items('Untuk_setiap_kontrak')?['BerakhirEfektif'],items('Untuk_setiap_kontrak')?['TanggalBerakhir']),'UTC','SE Asia Standard Time','yyyy-MM-dd')),ticks(convertTimeZone(utcNow(),'UTC','SE Asia Standard Time','yyyy-MM-dd'))),864000000000),int(formatNumber(coalesce(items('Untuk_setiap_kontrak')?['MasaPemberitahuanHari'],0),'0','en-US'))),0)))"
+              }
+            },
+            "Fokus_kontrak": {
+              "runAfter": {
+                "Jadwal_kontrak": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": {
+                "sisa": "@if(outputs('Jadwal_kontrak')?['fokusBatas'],sub(outputs('Jadwal_kontrak')?['sisaAkhir'],coalesce(outputs('Jadwal_kontrak')?['masa'],0)),outputs('Jadwal_kontrak')?['sisaAkhir'])",
+                "tanggal": "@if(outputs('Jadwal_kontrak')?['fokusBatas'],coalesce(outputs('Jadwal_kontrak')?['batas'],outputs('Jadwal_kontrak')?['akhir']),outputs('Jadwal_kontrak')?['akhir'])"
+              }
+            },
+            "Kirim_pengingat_kontrak": {
+              "runAfter": {
+                "Fokus_kontrak": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "767d28f5-5c20-4905-b659-d9891b410331"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                  "connectionName": "shared_office365",
+                  "operationId": "SendEmailV2"
+                },
+                "parameters": {
+                  "emailMessage/To": "@{if(not(empty(outputs('Email_uji'))),outputs('Email_uji'),concat(items('Untuk_setiap_kontrak')?['PengajuEmail'],if(empty(if(empty(items('Untuk_setiap_kontrak')?['PicLegalEmail']),if(or(outputs('Jadwal_kontrak')?['fokusBatas'],outputs('Jadwal_kontrak')?['otomatis']),outputs('Email_tim_legal'),''),items('Untuk_setiap_kontrak')?['PicLegalEmail'])),'',concat(';',if(empty(items('Untuk_setiap_kontrak')?['PicLegalEmail']),if(or(outputs('Jadwal_kontrak')?['fokusBatas'],outputs('Jadwal_kontrak')?['otomatis']),outputs('Email_tim_legal'),''),items('Untuk_setiap_kontrak')?['PicLegalEmail'])))))}",
+                  "emailMessage/Subject": "@{if(empty(outputs('Email_uji')),'','[UJI] ')}[WiCon] @{if(outputs('Jadwal_kontrak')?['fokusBatas'],if(less(outputs('Fokus_kontrak')?['sisa'],0),concat('Batas keputusan sudah lewat ',string(mul(outputs('Fokus_kontrak')?['sisa'],-1)),' hari'),if(equals(outputs('Fokus_kontrak')?['sisa'],0),'Batas keputusan hari ini',concat('Batas keputusan dalam ',string(outputs('Fokus_kontrak')?['sisa']),' hari'))),if(outputs('Jadwal_kontrak')?['otomatis'],if(less(outputs('Fokus_kontrak')?['sisa'],0),concat('Perpanjangan otomatis sudah lewat ',string(mul(outputs('Fokus_kontrak')?['sisa'],-1)),' hari'),if(equals(outputs('Fokus_kontrak')?['sisa'],0),'Diperpanjang otomatis hari ini',concat('Diperpanjang otomatis dalam ',string(outputs('Fokus_kontrak')?['sisa']),' hari'))),if(less(outputs('Fokus_kontrak')?['sisa'],0),concat('Masa berlaku sudah lewat ',string(mul(outputs('Fokus_kontrak')?['sisa'],-1)),' hari'),if(equals(outputs('Fokus_kontrak')?['sisa'],0),'Kontrak berakhir hari ini',concat('Kontrak berakhir dalam ',string(outputs('Fokus_kontrak')?['sisa']),' hari')))))}: @{items('Untuk_setiap_kontrak')?['Title']}",
+                  "emailMessage/Body": "<!DOCTYPE html><html lang=\"id\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light only\"><meta name=\"supported-color-schemes\" content=\"light only\"><title>@{if(outputs('Jadwal_kontrak')?['fokusBatas'],if(less(outputs('Fokus_kontrak')?['sisa'],0),concat('Batas keputusan sudah lewat ',string(mul(outputs('Fokus_kontrak')?['sisa'],-1)),' hari'),if(equals(outputs('Fokus_kontrak')?['sisa'],0),'Batas keputusan hari ini',concat('Batas keputusan dalam ',string(outputs('Fokus_kontrak')?['sisa']),' hari'))),if(outputs('Jadwal_kontrak')?['otomatis'],if(less(outputs('Fokus_kontrak')?['sisa'],0),concat('Perpanjangan otomatis sudah lewat ',string(mul(outputs('Fokus_kontrak')?['sisa'],-1)),' hari'),if(equals(outputs('Fokus_kontrak')?['sisa'],0),'Diperpanjang otomatis hari ini',concat('Diperpanjang otomatis dalam ',string(outputs('Fokus_kontrak')?['sisa']),' hari'))),if(less(outputs('Fokus_kontrak')?['sisa'],0),concat('Masa berlaku sudah lewat ',string(mul(outputs('Fokus_kontrak')?['sisa'],-1)),' hari'),if(equals(outputs('Fokus_kontrak')?['sisa'],0),'Kontrak berakhir hari ini',concat('Kontrak berakhir dalam ',string(outputs('Fokus_kontrak')?['sisa']),' hari')))))}</title><!--[if mso]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]--><style>body{margin:0;padding:0;width:100%!important;-webkit-text-size-adjust:100%;}table{border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;}a{color:#0a7f79;}@media only screen and (max-width:640px){.lebar{width:100%!important;}}</style></head><body style=\"margin:0;padding:0;background-color:#f2f5f9;\" bgcolor=\"#f2f5f9\"><div style=\"display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#f2f5f9;\">@{replace(replace(replace(string(coalesce(items('Untuk_setiap_kontrak')?['Title'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')}: @{if(outputs('Jadwal_kontrak')?['fokusBatas'],concat('putuskan paling lambat ',formatDateTime(convertTimeZone(coalesce(outputs('Jadwal_kontrak')?['batas'],outputs('Jadwal_kontrak')?['akhir']),'UTC','SE Asia Standard Time'),'d MMMM yyyy','id-ID')),concat(if(outputs('Jadwal_kontrak')?['otomatis'],'diperpanjang otomatis ','berakhir '),formatDateTime(convertTimeZone(outputs('Jadwal_kontrak')?['akhir'],'UTC','SE Asia Standard Time'),'d MMMM yyyy','id-ID')))}.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" bgcolor=\"#f2f5f9\" style=\"background-color:#f2f5f9;\"><tr><td align=\"center\" style=\"padding:24px 12px;\"><table role=\"presentation\" class=\"lebar\" width=\"640\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"width:640px;max-width:640px;\"><tr><td bgcolor=\"#0b1f3a\" style=\"background-color:#0b1f3a;border-radius:14px 14px 0 0;padding:22px 32px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td valign=\"middle\" width=\"44\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"40\" height=\"40\" align=\"center\" valign=\"middle\" bgcolor=\"#0a7f79\" style=\"background-color:#0a7f79;border-radius:10px;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:40px;font-weight:700;color:#ffffff;\">W</td></tr></table></td><td valign=\"middle\" style=\"padding-left:12px;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:26px;color:#ffffff;font-weight:700;\">WiCon<div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:600;color:#9db4d3;letter-spacing:1.2px;text-transform:uppercase;\">Contract Management &amp; Dashboard</div></td></tr></table></td></tr><tr><td height=\"5\" bgcolor=\"#e5a62c\" style=\"background-color:#e5a62c;font-size:0;line-height:0;\">&nbsp;</td></tr><tr><td bgcolor=\"#ffffff\" style=\"background-color:#ffffff;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"padding:28px 32px 0 32px;\"><div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;font-weight:800;color:#e5a62c;text-transform:uppercase;letter-spacing:1px;\">@{if(outputs('Jadwal_kontrak')?['otomatis'],'Perpanjangan otomatis',if(outputs('Jadwal_kontrak')?['fokusBatas'],'Batas keputusan','Pengingat masa berlaku'))}</div><div style=\"font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:34px;color:#0b1f3a;font-weight:700;padding-top:4px;\">@{if(outputs('Jadwal_kontrak')?['fokusBatas'],if(less(outputs('Fokus_kontrak')?['sisa'],0),concat('Batas keputusan sudah lewat ',string(mul(outputs('Fokus_kontrak')?['sisa'],-1)),' hari'),if(equals(outputs('Fokus_kontrak')?['sisa'],0),'Batas keputusan hari ini',concat('Batas keputusan dalam ',string(outputs('Fokus_kontrak')?['sisa']),' hari'))),if(outputs('Jadwal_kontrak')?['otomatis'],if(less(outputs('Fokus_kontrak')?['sisa'],0),concat('Perpanjangan otomatis sudah lewat ',string(mul(outputs('Fokus_kontrak')?['sisa'],-1)),' hari'),if(equals(outputs('Fokus_kontrak')?['sisa'],0),'Diperpanjang otomatis hari ini',concat('Diperpanjang otomatis dalam ',string(outputs('Fokus_kontrak')?['sisa']),' hari'))),if(less(outputs('Fokus_kontrak')?['sisa'],0),concat('Masa berlaku sudah lewat ',string(mul(outputs('Fokus_kontrak')?['sisa'],-1)),' hari'),if(equals(outputs('Fokus_kontrak')?['sisa'],0),'Kontrak berakhir hari ini',concat('Kontrak berakhir dalam ',string(outputs('Fokus_kontrak')?['sisa']),' hari')))))}</div></td></tr><tr><td style=\"padding:14px 32px 0 32px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1f2a37;\">Halo. @{if(outputs('Jadwal_kontrak')?['otomatis'],if(not(equals(outputs('Jadwal_kontrak')?['masa'],null)),concat('Kontrak di bawah ini <strong>diperpanjang otomatis</strong> sesuai klausulnya, jadi tidak perlu addendum perpanjangan. Bila kerja sama tidak ingin dilanjutkan atau syaratnya perlu dirundingkan ulang, sampaikan pemberitahuan ke mitra paling lambat <strong>',formatDateTime(convertTimeZone(coalesce(outputs('Jadwal_kontrak')?['batas'],outputs('Jadwal_kontrak')?['akhir']),'UTC','SE Asia Standard Time'),'d MMMM yyyy','id-ID'),'</strong>.'),concat('Kontrak di bawah ini <strong>diperpanjang otomatis</strong> sesuai klausulnya, jadi tidak perlu addendum perpanjangan. Tanggal perpanjangannya <strong>',formatDateTime(convertTimeZone(outputs('Jadwal_kontrak')?['akhir'],'UTC','SE Asia Standard Time'),'d MMMM yyyy','id-ID'),'</strong>. Masa pemberitahuannya belum dicatat, jadi batas keputusannya belum bisa dihitung. Mohon Legal melengkapinya di halaman kontrak.')),concat('Kontrak di bawah ini akan segera berakhir. Bila kerja samanya masih berlanjut, ajukan <strong>addendum perpanjangan</strong> sebelum tanggal berakhir. Bila tidak, Legal akan menandainya Berakhir.',if(greater(coalesce(outputs('Jadwal_kontrak')?['masa'],0),0),concat(' Kontrak ini mensyaratkan pemberitahuan ke mitra ',string(coalesce(outputs('Jadwal_kontrak')?['masa'],0)),' hari sebelum berakhir, jadi keputusan lanjut atau tidak perlu disampaikan paling lambat <strong>',formatDateTime(convertTimeZone(coalesce(outputs('Jadwal_kontrak')?['batas'],outputs('Jadwal_kontrak')?['akhir']),'UTC','SE Asia Standard Time'),'d MMMM yyyy','id-ID'),'</strong>',if(less(sub(outputs('Jadwal_kontrak')?['sisaAkhir'],coalesce(outputs('Jadwal_kontrak')?['masa'],0)),0),' (sudah lewat).','.')),'')))}</td></tr><tr><td style=\"padding:18px 32px 0 32px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" bgcolor=\"#fdf3dc\" style=\"background-color:#fdf3dc;border-radius:10px;\"><tr><td width=\"96\" align=\"center\" valign=\"middle\" style=\"padding:16px 8px 16px 18px;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"72\" height=\"72\" align=\"center\" valign=\"middle\" bgcolor=\"@{if(lessOrEquals(outputs('Fokus_kontrak')?['sisa'],7),'#b91c1c','#e5a62c')}\" style=\"background-color:@{if(lessOrEquals(outputs('Fokus_kontrak')?['sisa'],7),'#b91c1c','#e5a62c')};border-radius:14px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:30px;line-height:72px;font-weight:800;color:#ffffff;\">@{if(less(outputs('Fokus_kontrak')?['sisa'],0),'!',string(outputs('Fokus_kontrak')?['sisa']))}</td></tr></table></td><td valign=\"middle\" style=\"padding:16px 18px 16px 8px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;\"><div style=\"font-size:17px;line-height:24px;font-weight:800;color:#1f2a37;\">@{if(less(outputs('Fokus_kontrak')?['sisa'],0),concat('Sudah lewat ',string(mul(outputs('Fokus_kontrak')?['sisa'],-1)),' hari'),if(equals(outputs('Fokus_kontrak')?['sisa'],0),if(outputs('Jadwal_kontrak')?['fokusBatas'],'Batas keputusan hari ini',if(outputs('Jadwal_kontrak')?['otomatis'],'Diperpanjang hari ini','Berakhir hari ini')),concat('Sisa ',string(outputs('Fokus_kontrak')?['sisa']),' hari')))}</div><div style=\"font-size:13px;line-height:20px;color:#7a5200;\">@{if(outputs('Jadwal_kontrak')?['fokusBatas'],'Menuju batas keputusan. ',if(outputs('Jadwal_kontrak')?['otomatis'],'Menuju tanggal perpanjangan. ','Menuju tanggal berakhir. '))}Dihitung dari tanggal hari ini (WIB).</div></td></tr></table></td></tr><tr><td style=\"padding:18px 32px 0 32px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border:1px solid #e2e8f0;border-radius:10px;background-color:#f8fafc;\" bgcolor=\"#f8fafc\"><tr><td style=\"padding:6px 18px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">Nomor kontrak</td><td valign=\"top\" style=\"padding:9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\"><strong style=\"font-family:Consolas,'Courier New',monospace;\">@{coalesce(items('Untuk_setiap_kontrak')?['NomorKontrak'],items('Untuk_setiap_kontrak')?['NomorPengajuan'])}</strong></td></tr><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">Judul</td><td valign=\"top\" style=\"padding:9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\"><strong>@{replace(replace(replace(string(coalesce(items('Untuk_setiap_kontrak')?['Title'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')}</strong></td></tr><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">Mitra</td><td valign=\"top\" style=\"padding:9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\">@{replace(replace(replace(string(coalesce(items('Untuk_setiap_kontrak')?['NamaMitra'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')}</td></tr><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">Berakhir</td><td valign=\"top\" style=\"padding:9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\"><strong>@{formatDateTime(convertTimeZone(outputs('Jadwal_kontrak')?['akhir'],'UTC','SE Asia Standard Time'),'d MMMM yyyy','id-ID')}</strong> (@{if(outputs('Jadwal_kontrak')?['otomatis'],'diperpanjang otomatis sesuai klausul','sudah termasuk addendum yang berlaku')})</td></tr><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">Batas keputusan</td><td valign=\"top\" style=\"padding:9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\">@{if(equals(outputs('Jadwal_kontrak')?['masa'],null),'Belum dicatat Legal',if(equals(outputs('Jadwal_kontrak')?['masa'],0),'Tanpa masa pemberitahuan',concat('<strong>',formatDateTime(convertTimeZone(coalesce(outputs('Jadwal_kontrak')?['batas'],outputs('Jadwal_kontrak')?['akhir']),'UTC','SE Asia Standard Time'),'d MMMM yyyy','id-ID'),'</strong> (',string(outputs('Jadwal_kontrak')?['masa']),' hari sebelum berakhir)')))}</td></tr><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">Pengaju</td><td valign=\"top\" style=\"padding:9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\">@{replace(replace(replace(string(coalesce(items('Untuk_setiap_kontrak')?['PengajuNama'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')}</td></tr><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">PIC Legal</td><td valign=\"top\" style=\"padding:9px 0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\">@{replace(replace(replace(string(coalesce(coalesce(items('Untuk_setiap_kontrak')?['PicLegalNama'],'Belum ditetapkan'),'')),'&','&amp;'),'<','&lt;'),'>','&gt;')}</td></tr></table></td></tr></table></td></tr><tr><td style=\"padding:26px 32px 8px 32px;\">@{if(outputs('Jadwal_kontrak')?['otomatis'],'',concat('<a href=\"https://wicon.waskitainfrastruktur.co.id/#/saya/ajukan?induk=',string(items('Untuk_setiap_kontrak')?['ID']),'\" target=\"_blank\" style=\"display:inline-block;background-color:#0a7f79;border:2px solid #0a7f79;color:#ffffff;font-family:''Segoe UI'',Calibri,Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;font-weight:700;text-decoration:none;padding:10px 26px;border-radius:8px;\">Ajukan addendum perpanjangan</a><span style=\"display:inline-block;width:10px;\">&nbsp;</span>'))}<a href=\"https://wicon.waskitainfrastruktur.co.id/#/saya/kontrak/@{items('Untuk_setiap_kontrak')?['ID']}\" target=\"_blank\" style=\"display:inline-block;background-color:@{if(outputs('Jadwal_kontrak')?['otomatis'],'#0a7f79','#ffffff')};border:2px solid #0a7f79;color:@{if(outputs('Jadwal_kontrak')?['otomatis'],'#ffffff','#0a7f79')};font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;font-weight:700;text-decoration:none;padding:10px 26px;border-radius:8px;\">Buka kontrak</a></td></tr><tr><td style=\"padding:18px 32px 28px 32px;\">&nbsp;</td></tr></table></td></tr><tr><td bgcolor=\"#f8fafc\" style=\"background-color:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 14px 14px;padding:16px 32px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;\">Email otomatis dari <strong>WiCon</strong>, PT Waskita Karya Infrastruktur. Mohon tidak membalas email ini. Waktu ditampilkan dalam WIB.</td></tr></table></td></tr></table></body></html>",
+                  "emailMessage/Importance": "@{if(lessOrEquals(outputs('Fokus_kontrak')?['sisa'],7),'High','Normal')}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Catat_pengingat_kontrak": {
+              "runAfter": {
+                "Kirim_pengingat_kontrak": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "3db8b4af-3a93-4ffe-9e41-17991a3f9bb6"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "PatchItem"
+                },
+                "parameters": {
+                  "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+                  "table": "0288609d-15ba-4e92-8afb-a2e4d491dc3a",
+                  "id": "@items('Untuk_setiap_kontrak')?['ID']",
+                  "item/Title": "@items('Untuk_setiap_kontrak')?['Title']",
+                  "item/PengingatTerakhir": "@outputs('Tanggal_hari_ini')"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
+          }
+        },
+        "Ambil_jaminan_berakhir": {
+          "runAfter": {
+            "Email_tim_legal": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "51b2d1d4-e851-4600-b39f-c9ac5976fc8a"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems"
+            },
+            "parameters": {
+              "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+              "table": "8b435619-72ca-4c7d-a470-99e77d90f89f",
+              "$top": 500,
+              "$filter": "StatusJaminan eq 'Aktif' and TanggalBerakhirJaminan le '@{addDays(outputs('Tanggal_hari_ini'),max(outputs('Pengaturan')?['jaminanPeringatan']),'yyyy-MM-dd')}'"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 5000
+            }
+          }
+        },
+        "Untuk_setiap_jaminan": {
+          "runAfter": {
+            "Ambil_jaminan_berakhir": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach",
+          "foreach": "@body('Ambil_jaminan_berakhir')?['value']",
+          "actions": {
+            "Sisa_hari_jaminan": {
+              "runAfter": {},
+              "type": "Compose",
+              "inputs": "@div(sub(ticks(convertTimeZone(items('Untuk_setiap_jaminan')?['TanggalBerakhirJaminan'],'UTC','SE Asia Standard Time','yyyy-MM-dd')),ticks(convertTimeZone(utcNow(),'UTC','SE Asia Standard Time','yyyy-MM-dd'))),864000000000)"
+            },
+            "Kelompok_jaminan": {
+              "runAfter": {
+                "Sisa_hari_jaminan": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": {
+                "kini": "@xpath(xml(json(concat('{\"r\":{\"t\":',string(outputs('Pengaturan')?['jaminanPeringatan']),'}}'))),concat('count(/r/t[. >= ',string(outputs('Sisa_hari_jaminan')),'])'))",
+                "lalu": "@xpath(xml(json(concat('{\"r\":{\"t\":',string(outputs('Pengaturan')?['jaminanPeringatan']),'}}'))),concat('count(/r/t[. >= ',string(div(sub(ticks(convertTimeZone(items('Untuk_setiap_jaminan')?['TanggalBerakhirJaminan'],'UTC','SE Asia Standard Time','yyyy-MM-dd')),ticks(convertTimeZone(coalesce(items('Untuk_setiap_jaminan')?['PengingatTerakhir'],'1900-01-01T00:00:00Z'),'UTC','SE Asia Standard Time','yyyy-MM-dd'))),864000000000)),'])'))"
+              }
+            },
+            "Perlu_ingatkan_jaminan": {
+              "runAfter": {
+                "Kelompok_jaminan": [
+                  "Succeeded"
+                ]
+              },
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "greater": [
+                      "@outputs('Kelompok_jaminan')?['kini']",
+                      "@outputs('Kelompok_jaminan')?['lalu']"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Kirim_pengingat_jaminan": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "62700559-b35c-4e36-b825-30d23163260b"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                      "connectionName": "shared_office365",
+                      "operationId": "SendEmailV2"
+                    },
+                    "parameters": {
+                      "emailMessage/To": "@outputs('Email_tim_legal')",
+                      "emailMessage/Subject": "@{if(empty(outputs('Email_uji')),'','[UJI] ')}[WiCon] Jaminan @{if(less(outputs('Sisa_hari_jaminan'),0),'sudah lewat',concat('berakhir ',if(equals(outputs('Sisa_hari_jaminan'),0),'hari ini',concat('dalam ',string(outputs('Sisa_hari_jaminan')),' hari'))))}: @{items('Untuk_setiap_jaminan')?['JenisJaminan']?['Value']} @{items('Untuk_setiap_jaminan')?['Title']}",
+                      "emailMessage/Body": "<!DOCTYPE html><html lang=\"id\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light only\"><meta name=\"supported-color-schemes\" content=\"light only\"><title>@{if(less(outputs('Sisa_hari_jaminan'),0),'Jaminan sudah lewat masa berlaku',if(equals(outputs('Sisa_hari_jaminan'),0),'Jaminan berakhir hari ini',concat('Jaminan berakhir dalam ',string(outputs('Sisa_hari_jaminan')),' hari')))}</title><!--[if mso]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]--><style>body{margin:0;padding:0;width:100%!important;-webkit-text-size-adjust:100%;}table{border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;}a{color:#0a7f79;}@media only screen and (max-width:640px){.lebar{width:100%!important;}}</style></head><body style=\"margin:0;padding:0;background-color:#f2f5f9;\" bgcolor=\"#f2f5f9\"><div style=\"display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#f2f5f9;\">@{items('Untuk_setiap_jaminan')?['JenisJaminan']?['Value']} @{replace(replace(replace(string(coalesce(items('Untuk_setiap_jaminan')?['Title'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')} berakhir @{formatDateTime(convertTimeZone(items('Untuk_setiap_jaminan')?['TanggalBerakhirJaminan'],'UTC','SE Asia Standard Time'),'d MMMM yyyy','id-ID')}.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" bgcolor=\"#f2f5f9\" style=\"background-color:#f2f5f9;\"><tr><td align=\"center\" style=\"padding:24px 12px;\"><table role=\"presentation\" class=\"lebar\" width=\"640\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"width:640px;max-width:640px;\"><tr><td bgcolor=\"#0b1f3a\" style=\"background-color:#0b1f3a;border-radius:14px 14px 0 0;padding:22px 32px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td valign=\"middle\" width=\"44\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"40\" height=\"40\" align=\"center\" valign=\"middle\" bgcolor=\"#0a7f79\" style=\"background-color:#0a7f79;border-radius:10px;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:40px;font-weight:700;color:#ffffff;\">W</td></tr></table></td><td valign=\"middle\" style=\"padding-left:12px;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:26px;color:#ffffff;font-weight:700;\">WiCon<div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:600;color:#9db4d3;letter-spacing:1.2px;text-transform:uppercase;\">Contract Management &amp; Dashboard</div></td></tr></table></td></tr><tr><td height=\"5\" bgcolor=\"#b91c1c\" style=\"background-color:#b91c1c;font-size:0;line-height:0;\">&nbsp;</td></tr><tr><td bgcolor=\"#ffffff\" style=\"background-color:#ffffff;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"padding:28px 32px 0 32px;\"><div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;font-weight:800;color:#b91c1c;text-transform:uppercase;letter-spacing:1px;\">Pengingat jaminan</div><div style=\"font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:34px;color:#0b1f3a;font-weight:700;padding-top:4px;\">@{if(less(outputs('Sisa_hari_jaminan'),0),'Jaminan sudah lewat masa berlaku',if(equals(outputs('Sisa_hari_jaminan'),0),'Jaminan berakhir hari ini',concat('Jaminan berakhir dalam ',string(outputs('Sisa_hari_jaminan')),' hari')))}</div></td></tr><tr><td style=\"padding:14px 32px 0 32px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1f2a37;\">Jaminan berikut akan habis masa berlakunya. Mintakan perpanjangan ke penerbit bila kontraknya masih berjalan, atau tandai <strong>Dikembalikan</strong> bila kewajiban mitra sudah selesai.</td></tr><tr><td style=\"padding:18px 32px 0 32px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" bgcolor=\"#fdf3dc\" style=\"background-color:#fdf3dc;border-radius:10px;\"><tr><td width=\"96\" align=\"center\" valign=\"middle\" style=\"padding:16px 8px 16px 18px;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"72\" height=\"72\" align=\"center\" valign=\"middle\" bgcolor=\"@{if(lessOrEquals(outputs('Sisa_hari_jaminan'),7),'#b91c1c','#e5a62c')}\" style=\"background-color:@{if(lessOrEquals(outputs('Sisa_hari_jaminan'),7),'#b91c1c','#e5a62c')};border-radius:14px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:30px;line-height:72px;font-weight:800;color:#ffffff;\">@{if(less(outputs('Sisa_hari_jaminan'),0),'!',string(outputs('Sisa_hari_jaminan')))}</td></tr></table></td><td valign=\"middle\" style=\"padding:16px 18px 16px 8px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;\"><div style=\"font-size:17px;line-height:24px;font-weight:800;color:#1f2a37;\">@{if(less(outputs('Sisa_hari_jaminan'),0),concat('Sudah lewat ',string(mul(outputs('Sisa_hari_jaminan'),-1)),' hari'),if(equals(outputs('Sisa_hari_jaminan'),0),'Berakhir hari ini',concat('Sisa ',string(outputs('Sisa_hari_jaminan')),' hari')))}</div><div style=\"font-size:13px;line-height:20px;color:#7a5200;\">Dihitung dari tanggal hari ini (WIB).</div></td></tr></table></td></tr><tr><td style=\"padding:18px 32px 0 32px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border:1px solid #e2e8f0;border-radius:10px;background-color:#f8fafc;\" bgcolor=\"#f8fafc\"><tr><td style=\"padding:6px 18px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">Jenis</td><td valign=\"top\" style=\"padding:9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\"><strong>@{items('Untuk_setiap_jaminan')?['JenisJaminan']?['Value']}</strong></td></tr><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">Nomor</td><td valign=\"top\" style=\"padding:9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\"><span style=\"font-family:Consolas,'Courier New',monospace;\">@{replace(replace(replace(string(coalesce(items('Untuk_setiap_jaminan')?['Title'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')}</span></td></tr><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">Penerbit</td><td valign=\"top\" style=\"padding:9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\">@{replace(replace(replace(string(coalesce(items('Untuk_setiap_jaminan')?['Penerbit'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')}</td></tr><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">Nilai</td><td valign=\"top\" style=\"padding:9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\">@{items('Untuk_setiap_jaminan')?['MataUangJaminan']?['Value']} @{formatNumber(coalesce(items('Untuk_setiap_jaminan')?['NilaiJaminan'],0),'N0','id-ID')}</td></tr><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">Berakhir</td><td valign=\"top\" style=\"padding:9px 0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\"><strong>@{formatDateTime(convertTimeZone(items('Untuk_setiap_jaminan')?['TanggalBerakhirJaminan'],'UTC','SE Asia Standard Time'),'d MMMM yyyy','id-ID')}</strong></td></tr></table></td></tr></table></td></tr><tr><td style=\"padding:26px 32px 8px 32px;\"><a href=\"https://wicon.waskitainfrastruktur.co.id/#/kontrak/@{items('Untuk_setiap_jaminan')?['KontrakId']}\" target=\"_blank\" style=\"display:inline-block;background-color:#0a7f79;border:2px solid #0a7f79;color:#ffffff;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;font-weight:700;text-decoration:none;padding:10px 26px;border-radius:8px;\">Buka kontrak</a></td></tr><tr><td style=\"padding:18px 32px 28px 32px;\">&nbsp;</td></tr></table></td></tr><tr><td bgcolor=\"#f8fafc\" style=\"background-color:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 14px 14px;padding:16px 32px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;\">Email otomatis dari <strong>WiCon</strong>, PT Waskita Karya Infrastruktur. Mohon tidak membalas email ini. Waktu ditampilkan dalam WIB.</td></tr></table></td></tr></table></body></html>",
+                      "emailMessage/Importance": "High"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                },
+                "Catat_pengingat_jaminan": {
+                  "runAfter": {
+                    "Kirim_pengingat_jaminan": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "25a5b345-ed6b-4962-b8f4-57635e03e5bb"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "connectionName": "shared_sharepointonline",
+                      "operationId": "PatchItem"
+                    },
+                    "parameters": {
+                      "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+                      "table": "8b435619-72ca-4c7d-a470-99e77d90f89f",
+                      "id": "@items('Untuk_setiap_jaminan')?['ID']",
+                      "item/Title": "@items('Untuk_setiap_jaminan')?['Title']",
+                      "item/PengingatTerakhir": "@outputs('Tanggal_hari_ini')"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              }
+            }
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
+          }
+        },
+        "Ambil_kewajiban": {
+          "runAfter": {
+            "Email_tim_legal": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "bb7ec34f-6196-4212-8193-374c832157e5"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems"
+            },
+            "parameters": {
+              "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+              "table": "61677c2e-cac1-48ed-a7f9-eb41b4f09d9e",
+              "$top": 500,
+              "$filter": "StatusKewajiban eq 'Terbuka' and JatuhTempo le '@{addDays(outputs('Tanggal_hari_ini'),7,'yyyy-MM-dd')}'"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 5000
+            }
+          }
+        },
+        "Untuk_setiap_kewajiban": {
+          "runAfter": {
+            "Ambil_kewajiban": [
+              "Succeeded"
+            ]
+          },
+          "type": "Foreach",
+          "foreach": "@body('Ambil_kewajiban')?['value']",
+          "actions": {
+            "Sisa_hari_kewajiban": {
+              "runAfter": {},
+              "type": "Compose",
+              "inputs": "@div(sub(ticks(convertTimeZone(items('Untuk_setiap_kewajiban')?['JatuhTempo'],'UTC','SE Asia Standard Time','yyyy-MM-dd')),ticks(convertTimeZone(utcNow(),'UTC','SE Asia Standard Time','yyyy-MM-dd'))),864000000000)"
+            },
+            "Kelompok_kewajiban": {
+              "runAfter": {
+                "Sisa_hari_kewajiban": [
+                  "Succeeded"
+                ]
+              },
+              "type": "Compose",
+              "inputs": {
+                "kini": "@if(lessOrEquals(outputs('Sisa_hari_kewajiban'),0),0,if(lessOrEquals(outputs('Sisa_hari_kewajiban'),1),1,if(lessOrEquals(outputs('Sisa_hari_kewajiban'),7),7,999)))",
+                "lalu": "@if(lessOrEquals(div(sub(ticks(convertTimeZone(items('Untuk_setiap_kewajiban')?['JatuhTempo'],'UTC','SE Asia Standard Time','yyyy-MM-dd')),ticks(convertTimeZone(coalesce(items('Untuk_setiap_kewajiban')?['PengingatTerakhir'],'1900-01-01T00:00:00Z'),'UTC','SE Asia Standard Time','yyyy-MM-dd'))),864000000000),0),0,if(lessOrEquals(div(sub(ticks(convertTimeZone(items('Untuk_setiap_kewajiban')?['JatuhTempo'],'UTC','SE Asia Standard Time','yyyy-MM-dd')),ticks(convertTimeZone(coalesce(items('Untuk_setiap_kewajiban')?['PengingatTerakhir'],'1900-01-01T00:00:00Z'),'UTC','SE Asia Standard Time','yyyy-MM-dd'))),864000000000),1),1,if(lessOrEquals(div(sub(ticks(convertTimeZone(items('Untuk_setiap_kewajiban')?['JatuhTempo'],'UTC','SE Asia Standard Time','yyyy-MM-dd')),ticks(convertTimeZone(coalesce(items('Untuk_setiap_kewajiban')?['PengingatTerakhir'],'1900-01-01T00:00:00Z'),'UTC','SE Asia Standard Time','yyyy-MM-dd'))),864000000000),7),7,999)))"
+              }
+            },
+            "Perlu_ingatkan_kewajiban": {
+              "runAfter": {
+                "Kelompok_kewajiban": [
+                  "Succeeded"
+                ]
+              },
+              "type": "If",
+              "expression": {
+                "and": [
+                  {
+                    "less": [
+                      "@outputs('Kelompok_kewajiban')?['kini']",
+                      "@outputs('Kelompok_kewajiban')?['lalu']"
+                    ]
+                  }
+                ]
+              },
+              "actions": {
+                "Kirim_pengingat_kewajiban": {
+                  "runAfter": {},
+                  "metadata": {
+                    "operationMetadataId": "f625d831-e2d2-4360-aabf-c83a0fae60c9"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                      "connectionName": "shared_office365",
+                      "operationId": "SendEmailV2"
+                    },
+                    "parameters": {
+                      "emailMessage/To": "@{if(not(empty(outputs('Email_uji'))),outputs('Email_uji'),if(empty(items('Untuk_setiap_kewajiban')?['PicEmail']),outputs('Email_tim_legal'),items('Untuk_setiap_kewajiban')?['PicEmail']))}",
+                      "emailMessage/Subject": "@{if(empty(outputs('Email_uji')),'','[UJI] ')}[WiCon] Kewajiban jatuh tempo: @{items('Untuk_setiap_kewajiban')?['Title']}",
+                      "emailMessage/Body": "<!DOCTYPE html><html lang=\"id\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light only\"><meta name=\"supported-color-schemes\" content=\"light only\"><title>@{if(less(outputs('Sisa_hari_kewajiban'),0),'Kewajiban sudah lewat jatuh tempo',if(equals(outputs('Sisa_hari_kewajiban'),0),'Kewajiban jatuh tempo hari ini',concat('Kewajiban jatuh tempo dalam ',string(outputs('Sisa_hari_kewajiban')),' hari')))}</title><!--[if mso]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]--><style>body{margin:0;padding:0;width:100%!important;-webkit-text-size-adjust:100%;}table{border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;}a{color:#0a7f79;}@media only screen and (max-width:640px){.lebar{width:100%!important;}}</style></head><body style=\"margin:0;padding:0;background-color:#f2f5f9;\" bgcolor=\"#f2f5f9\"><div style=\"display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#f2f5f9;\">@{replace(replace(replace(string(coalesce(items('Untuk_setiap_kewajiban')?['Title'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')} jatuh tempo @{formatDateTime(convertTimeZone(items('Untuk_setiap_kewajiban')?['JatuhTempo'],'UTC','SE Asia Standard Time'),'d MMMM yyyy','id-ID')}.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" bgcolor=\"#f2f5f9\" style=\"background-color:#f2f5f9;\"><tr><td align=\"center\" style=\"padding:24px 12px;\"><table role=\"presentation\" class=\"lebar\" width=\"640\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"width:640px;max-width:640px;\"><tr><td bgcolor=\"#0b1f3a\" style=\"background-color:#0b1f3a;border-radius:14px 14px 0 0;padding:22px 32px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td valign=\"middle\" width=\"44\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"40\" height=\"40\" align=\"center\" valign=\"middle\" bgcolor=\"#0a7f79\" style=\"background-color:#0a7f79;border-radius:10px;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:40px;font-weight:700;color:#ffffff;\">W</td></tr></table></td><td valign=\"middle\" style=\"padding-left:12px;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:26px;color:#ffffff;font-weight:700;\">WiCon<div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:600;color:#9db4d3;letter-spacing:1.2px;text-transform:uppercase;\">Contract Management &amp; Dashboard</div></td></tr></table></td></tr><tr><td height=\"5\" bgcolor=\"#e5a62c\" style=\"background-color:#e5a62c;font-size:0;line-height:0;\">&nbsp;</td></tr><tr><td bgcolor=\"#ffffff\" style=\"background-color:#ffffff;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"padding:28px 32px 0 32px;\"><div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;font-weight:800;color:#e5a62c;text-transform:uppercase;letter-spacing:1px;\">Pengingat kewajiban</div><div style=\"font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:34px;color:#0b1f3a;font-weight:700;padding-top:4px;\">@{if(less(outputs('Sisa_hari_kewajiban'),0),'Kewajiban sudah lewat jatuh tempo',if(equals(outputs('Sisa_hari_kewajiban'),0),'Kewajiban jatuh tempo hari ini',concat('Kewajiban jatuh tempo dalam ',string(outputs('Sisa_hari_kewajiban')),' hari')))}</div></td></tr><tr><td style=\"padding:14px 32px 0 32px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1f2a37;\">Ada kewajiban kontrak yang perlu diselesaikan. Setelah selesai, buka kontraknya dan tekan <strong>Tandai selesai</strong> (lampirkan buktinya, mis. BAST).</td></tr><tr><td style=\"padding:18px 32px 0 32px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" bgcolor=\"#fdf3dc\" style=\"background-color:#fdf3dc;border-radius:10px;\"><tr><td width=\"96\" align=\"center\" valign=\"middle\" style=\"padding:16px 8px 16px 18px;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"72\" height=\"72\" align=\"center\" valign=\"middle\" bgcolor=\"@{if(lessOrEquals(outputs('Sisa_hari_kewajiban'),7),'#b91c1c','#e5a62c')}\" style=\"background-color:@{if(lessOrEquals(outputs('Sisa_hari_kewajiban'),7),'#b91c1c','#e5a62c')};border-radius:14px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:30px;line-height:72px;font-weight:800;color:#ffffff;\">@{if(less(outputs('Sisa_hari_kewajiban'),0),'!',string(outputs('Sisa_hari_kewajiban')))}</td></tr></table></td><td valign=\"middle\" style=\"padding:16px 18px 16px 8px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;\"><div style=\"font-size:17px;line-height:24px;font-weight:800;color:#1f2a37;\">@{if(less(outputs('Sisa_hari_kewajiban'),0),concat('Sudah lewat ',string(mul(outputs('Sisa_hari_kewajiban'),-1)),' hari'),if(equals(outputs('Sisa_hari_kewajiban'),0),'Jatuh tempo hari ini',concat('Sisa ',string(outputs('Sisa_hari_kewajiban')),' hari')))}</div><div style=\"font-size:13px;line-height:20px;color:#7a5200;\">Dihitung dari tanggal hari ini (WIB).</div></td></tr></table></td></tr><tr><td style=\"padding:18px 32px 0 32px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border:1px solid #e2e8f0;border-radius:10px;background-color:#f8fafc;\" bgcolor=\"#f8fafc\"><tr><td style=\"padding:6px 18px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">Kewajiban</td><td valign=\"top\" style=\"padding:9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\"><strong>@{replace(replace(replace(string(coalesce(items('Untuk_setiap_kewajiban')?['Title'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')}</strong></td></tr><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">Tipe</td><td valign=\"top\" style=\"padding:9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\">@{items('Untuk_setiap_kewajiban')?['TipeKewajiban']?['Value']}</td></tr><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">Jatuh tempo</td><td valign=\"top\" style=\"padding:9px 0;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\"><strong>@{formatDateTime(convertTimeZone(items('Untuk_setiap_kewajiban')?['JatuhTempo'],'UTC','SE Asia Standard Time'),'d MMMM yyyy','id-ID')}</strong></td></tr><tr><td width=\"150\" valign=\"top\" style=\"padding:9px 12px 9px 0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:0.4px;\">Catatan</td><td valign=\"top\" style=\"padding:9px 0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:14px;line-height:20px;color:#1f2a37;\">@{replace(replace(replace(string(coalesce(items('Untuk_setiap_kewajiban')?['CatatanKewajiban'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')}</td></tr></table></td></tr></table></td></tr><tr><td style=\"padding:26px 32px 8px 32px;\"><a href=\"https://wicon.waskitainfrastruktur.co.id/#/saya/kontrak/@{items('Untuk_setiap_kewajiban')?['KontrakId']}\" target=\"_blank\" style=\"display:inline-block;background-color:#0a7f79;border:2px solid #0a7f79;color:#ffffff;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;font-weight:700;text-decoration:none;padding:10px 26px;border-radius:8px;\">Buka kontrak</a></td></tr><tr><td style=\"padding:18px 32px 28px 32px;\">&nbsp;</td></tr></table></td></tr><tr><td bgcolor=\"#f8fafc\" style=\"background-color:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 14px 14px;padding:16px 32px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;\">Email otomatis dari <strong>WiCon</strong>, PT Waskita Karya Infrastruktur. Mohon tidak membalas email ini. Waktu ditampilkan dalam WIB.</td></tr></table></td></tr></table></body></html>",
+                      "emailMessage/Importance": "Normal"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                },
+                "Catat_pengingat_kewajiban": {
+                  "runAfter": {
+                    "Kirim_pengingat_kewajiban": [
+                      "Succeeded"
+                    ]
+                  },
+                  "metadata": {
+                    "operationMetadataId": "4c14e6ff-21b8-44f7-84e9-2e3d1b82f860"
+                  },
+                  "type": "OpenApiConnection",
+                  "inputs": {
+                    "host": {
+                      "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                      "connectionName": "shared_sharepointonline",
+                      "operationId": "PatchItem"
+                    },
+                    "parameters": {
+                      "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+                      "table": "61677c2e-cac1-48ed-a7f9-eb41b4f09d9e",
+                      "id": "@items('Untuk_setiap_kewajiban')?['ID']",
+                      "item/Title": "@items('Untuk_setiap_kewajiban')?['Title']",
+                      "item/PengingatTerakhir": "@outputs('Tanggal_hari_ini')"
+                    },
+                    "authentication": "@parameters('$authentication')"
+                  }
+                }
+              },
+              "else": {
+                "actions": {}
+              }
+            }
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "repetitions": 1
+            }
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

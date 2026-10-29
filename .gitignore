@@ -1,0 +1,18 @@
+node_modules
+dist
+*.local
+.DS_Store
+graphify-out/cache
+.env
+.env.*
+!.env.example
+cadangan/
+rilis/
+kontrak-dist.zip
+*.tsbuildinfo
+scripts/.keluaran/
+graphify-out/.graphify_*
+.claude/settings.local.json
+# Peta graphify dan vault Obsidian dibuat ulang lewat /graphify . --update --obsidian
+graphify-out/*
+!graphify-out/GRAPH_REPORT.md

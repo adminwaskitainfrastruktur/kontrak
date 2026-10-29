@@ -1,0 +1,55 @@
+{
+  "$schema": "https://developer.microsoft.com/en-us/json-schemas/teams/v1.19/MicrosoftTeams.schema.json",
+  "manifestVersion": "1.19",
+  "version": "1.0.1",
+  "id": "d97d1e03-aeae-4329-b17e-4c9ee8420388",
+  "developer": {
+    "name": "PT Waskita Karya Infrastruktur",
+    "websiteUrl": "https://wicon.waskitainfrastruktur.co.id/",
+    "privacyUrl": "https://wicon.waskitainfrastruktur.co.id/",
+    "termsOfUseUrl": "https://wicon.waskitainfrastruktur.co.id/"
+  },
+  "name": {
+    "short": "WiCon",
+    "full": "WiCon - Contract Management & Dashboard Waskita Karya Infrastruktur"
+  },
+  "description": {
+    "short": "Ajukan, pantau, dan kelola kontrak WKI langsung dari Teams.",
+    "full": "WiCon adalah sistem kontrak internal PT Waskita Karya Infrastruktur. Pengadaan dan SCM mengajukan dan memantau kontrak, Legal mereview sampai tanda tangan, dan semua kontrak tercatat rapi dengan pengingat masa berlaku. Tab Monitoring menampilkan kontrak milik Anda; tab Dashboard Legal untuk tim Legal dan admin."
+  },
+  "icons": {
+    "color": "color.png",
+    "outline": "outline.png"
+  },
+  "accentColor": "#0A7F79",
+  "staticTabs": [
+    {
+      "entityId": "monitoring",
+      "name": "Monitoring",
+      "contentUrl": "https://wicon.waskitainfrastruktur.co.id/?teams=1#/saya",
+      "websiteUrl": "https://wicon.waskitainfrastruktur.co.id/#/saya",
+      "scopes": ["personal"],
+      "context": ["personalTab"]
+    },
+    {
+      "entityId": "dashboard-legal",
+      "name": "Dashboard Legal",
+      "contentUrl": "https://wicon.waskitainfrastruktur.co.id/?teams=1#/",
+      "websiteUrl": "https://wicon.waskitainfrastruktur.co.id/#/",
+      "scopes": ["personal"],
+      "context": ["personalTab"]
+    },
+    {
+      "entityId": "about",
+      "scopes": ["personal"]
+    }
+  ],
+  "permissions": ["identity"],
+  "validDomains": ["wicon.waskitainfrastruktur.co.id"],
+  "webApplicationInfo": {
+    "id": "f536a53d-8a16-45cf-9acf-d8c77212b605",
+    "resource": "api://wicon.waskitainfrastruktur.co.id/f536a53d-8a16-45cf-9acf-d8c77212b605"
+  },
+  "showLoadingIndicator": false,
+  "isFullScreen": false
+}

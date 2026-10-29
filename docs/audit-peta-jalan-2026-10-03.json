@@ -1,0 +1,446 @@
+{
+  "summary": "Audit setiap butir PETA-JALAN terhadap kode Kontrak WKI (read-only)",
+  "agentCount": 4,
+  "logs": [],
+  "result": {
+    "gagal": [],
+    "items": [
+      {
+        "id": "S0",
+        "judul": "Persiapan skema SharePoint dan pengetatan izin (satu kali)",
+        "status": "butuh-manusia",
+        "bukti": "Panduan izin sudah ditulis di docs/KEAMANAN.md dan ditautkan dari README.md:77-80 dan :226. Isinya: grup, tingkat izin 'Tambah Saja', izin per list (Pengguna Read, Aktivitas Tambah Saja, dst.), versioning, retensi Purview, co-owner flow. src/config.ts:11-26 sudah memuat semua LIST_ID, termasuk kasus, masukan, dan logAdmin.",
+        "kurang": "Dari kode tidak bisa dipastikan apakah langkah ini sudah dijalankan di SharePoint. README tidak berisi daftar kolom, list, dan pilihan Choice yang harus dibuat dalam satu sesi (StatusSejak, KontrakFinal, BerakhirEfektif, 4 JenisDokumen baru, jenis aktivitas Penugasan, kolom Aktivitas, dll.), jadi checklist skemanya belum ada. Audit Purview tidak disebut, hanya retensi. Library Berkas untuk Member tetap Contribute dengan hak hapus; versi tanpa hapus hanya opsi. LIST_ID.kasus dan LIST_ID.masukan tidak dipakai di kode mana pun (README:31: 'belum dipakai aplikasi')."
+      },
+      {
+        "id": "T1-TGL",
+        "judul": "Cap tanggal dan jam masuk (WIB) di seluruh aplikasi",
+        "status": "selesai",
+        "bukti": "Jam disimpan: services/kontrak.ts:194 menulis TanggalDiajukan ISO berjam; bila kosong, semua tampilan jatuh ke dibuat (createdDateTime). Fungsi format: lib/format.ts:69-80 formatMasuk dan formatMasukRingkas. Tampil di DaftarKontrak.tsx:439 dan :487 (kolom Masuk) serta :622 (kartu), DetailKontrak.tsx:367/:472/:790, kartu Dashboard.tsx:492-497, MonitoringSaya.tsx:353-357. Ekspor: ekspor.ts:133 kolom 'Masuk (WIB)'. Email aplikasi: email.ts dan emailKit.ts. Flow: power-automate/alur/umum.mjs:169 waktuWib, dipakai agenda.mjs:45.",
+        "kurang": ""
+      },
+      {
+        "id": "U01",
+        "judul": "Antrean kerja konsisten: angka sama dengan daftar, kolom PIC/Prioritas/Target, chip preset Legal",
+        "status": "sebagian",
+        "bukti": "lib/filterKerja.ts: urutKerjaLegal :223 (status Diajukan tetap memakai antreanLegal), parameter URL tindakan/pic/prioritas/berakhir/urut/sla, PRESET_KERJA, serta hitungPreset dan saringKerja dengan pencocok yang sama. DaftarKontrak.tsx:269-291 menampilkan chip preset; kolom PIC/Prioritas/Target/Umur bisa diurutkan (:436-446). Lonceng Layout.tsx:290-296 membuka antrean-saya. Tautan 'Lihat semua (n)' di Dashboard.tsx:366/:383/:406/:419. Daftar terakhir disimpan di sessionStorage dan dipakai DetailKontrak.tsx:160. Preset masuk Ctrl+K di PaletPerintah.tsx:89-92.",
+        "kurang": "Dua ubin KPI angkanya masih beda dengan daftar yang terbuka: 'Sedang diproses' (Dashboard.tsx:265) membuka /kontrak tanpa filter, jadi semua status ikut tampil. 'Kontrak aktif' (:267) menghitung kontrak non-addendum, tetapi membuka ?status=Aktif yang ikut memuat addendum aktif."
+      },
+      {
+        "id": "U05A",
+        "judul": "Lewat masa berlaku memakai berakhir efektif dan dipisah dari 'Akan berakhir'",
+        "status": "sebagian",
+        "bukti": "Logika di filterKerja.ts: tanggalBerakhirEfektif, petaBerakhirEfektif, lewatMasaBerlaku, akanBerakhir. DaftarKontrak.tsx:113-114 menghitung peta sekali dengan useMemo dan menampilkan kolom Berakhir dengan keterangan 'lewat addendum'. ekspor.ts:96 kolom Berakhir Efektif. Dashboard.tsx:119-120, :268-269 dan :399-427 memisahkan ubin dan kartu 'Lewat masa berlaku' dari 'Akan berakhir'. Filter ?berakhir=lewat|N tersedia. Tidak ada perubahan status otomatis saat halaman dibuka.",
+        "kurang": "Lencana 'addendum perpanjangan sedang diproses' tidak ada di daftar maupun Dashboard; hanya berupa kalimat di BannerBerakhir (DetailKontrak.tsx:937), itu pun hanya dalam horizon peringatan. Nilai kontrak yang lewat masa tidak tampil sebagai baris terpisah di Dashboard: kartu nilai hanya menyebut jumlahnya (:238), nilainya baru muncul di Laporan.tsx:631-636."
+      },
+      {
+        "id": "U29A",
+        "judul": "Nilai kontrak per mata uang dan kunci mata uang addendum",
+        "status": "sebagian",
+        "bukti": "lib/portofolio.ts menjumlah per mata uang tanpa konversi, dan kontrak yang lewat masa dikeluarkan dari komitmen. Kartu Dashboard.tsx:215-239 menampilkan 'Rp X + USD Y …'. Label 'hanya IDR' sudah tidak ada. addendum.ts:39 hanya menjumlah addendum yang mata uangnya sama dengan induk.",
+        "kurang": "Mata uang addendum tidak dikunci: pilihan tetap bebas di ChatAjukan.tsx:1266 dan FormKontrak.tsx:550. Chat hanya mengambil nilai awal dari induk lewat URL (:354). Memilih induk di tengah chat (:1233) atau di formulir (isiDariAcuan :208-210) tidak menyalin mataUang. Tidak ada peringatan bila addendum lama beda mata uang; addendum.ts:39 mengabaikannya diam-diam. Urutan kolom Nilai (DaftarKontrak.tsx:156-157) memakai angka mentah, belum dikelompokkan per mata uang."
+      },
+      {
+        "id": "U03A",
+        "judul": "Lencana target dan umur pengajuan",
+        "status": "sebagian",
+        "bukti": "components/LencanaSla.tsx menampilkan umur tahap serta 'Sisa n hari' / 'Lewat target n hari'; dirender di DaftarKontrak.tsx:513/:630 dan DetailKontrak.tsx:274/:357. Filter ?sla=target dan chip 'Lewat target' tersedia. Ubin Dashboard.tsx:266. CSV memuat 'Umur Tahap (hari)' dan 'Target Selesai' (ekspor.ts:134-135). Target bukan kunci urut antrean (filterKerja.ts:6-8).",
+        "kurang": "Teks 'Diperbarui {formatRelatif(k.diubah)}' yang menyesatkan di kartu Ruang Pengguna (MonitoringSaya.tsx:359) belum diganti. Umur dihitung dari StatusSejak (umur tahap), bukan dari tanggalDiajukan seperti di Cara, jadi umur total pengajuan tidak ditampilkan."
+      },
+      {
+        "id": "U02",
+        "judul": "Penugasan PIC dengan konfirmasi alih, jejak lama-ke-baru, dan beban tim",
+        "status": "sebagian",
+        "bukti": "components/TugaskanPic.tsx dirender di hero DetailKontrak.tsx:385. Isinya: menu 'Tugaskan ke...' dengan beban tiap staf, ModalAlih dengan alasan wajib, dan jalankanPenugasan :42-53 yang membaca ulang lewat ambilKontrak lalu batal bila PIC sudah berubah, plus jejak 'Penugasan' lama ke baru. Jenis Penugasan ada di types.ts:173, dengan fallback ikon di DetailKontrak.tsx:1109-1114. butuhTindakan (alur.ts:116-124) untuk Diajukan ber-PIC hanya berlaku bagi PIC itu. KartuBeban dirender di Dashboard.tsx:439 dengan filter ?pic= dan ModalAlihSemua. AksiMassal juga memakai jalankanPenugasan.",
+        "kurang": "Alur utama sudah selesai; yang tersisa satu jalan pintas: formulir ubah (FormKontrak.tsx:600-616) masih punya pilihan 'PIC Legal' yang disimpan lewat ubahKontrak. Jalur ini tanpa alasan, tanpa cek PIC berubah, tanpa jejak Penugasan, dan tanpa email ke PIC baru, sehingga melewati konfirmasi alih."
+      },
+      {
+        "id": "U38",
+        "judul": "Ketahanan sesi: masuk ulang di tempat, coba ulang aman, toast, cek konflik",
+        "status": "sebagian",
+        "bukti": "GraphError.perluLogin ada di lib/graph.ts:26. KotakError punya tombol 'Masuk ulang' (ui.tsx:164-184), tetapi hanya dipasang di App.tsx:47 (gagal memuat sesi). Toaster sonner ada di Layout.tsx:544. Cek konflik dengan membaca ulang ada di TugaskanPic.tsx:44, AksiMassal.tsx:193, ChecklistReviewPanel.tsx:66, PanelTtd.tsx:58.",
+        "kurang": "Sebagian besar Cara belum ada:\n- Tidak ada event perluLogin dari graph(), dan tidak ada pita 'Sesi berakhir, Masuk ulang' (acquireTokenPopup dengan cadangan loginRedirect) yang lalu memuat ulang halaman aktif.\n- KotakError di halaman lain tidak diberi onMasukUlang.\n- Tidak ada coba ulang otomatis untuk 429 dan 503/504 dengan Retry-After; graph.ts:104-129 langsung melempar galat.\n- Tidak ada pita luring.\n- Toast belum terpusat.\n- Aksi status tunggal (ModalAksi DetailKontrak.tsx:589 ke jalankanAksi kontrak.ts:324) tidak membaca ulang kontrak dan membandingkan status/PIC sebelum PATCH."
+      },
+      {
+        "id": "U14+U13F0",
+        "judul": "Jenis dokumen per berkas, seret-lepas, ubah jenis atau hapus berkas",
+        "status": "selesai",
+        "bukti": "types.ts:207-221 memuat 4 jenis baru. components/UnggahDokumen.tsx adalah antrean unggah bersama dengan chip jenis per berkas dan seret-lepas (:108-115); dipakai di ChatAjukan.tsx:1369, FormKontrak.tsx:645, dan PanelDokumenBaru.tsx:153 (dirender DetailKontrak.tsx:235). Tebakan jenis jenisBerkas.ts:91-105 berbasis kata dan tidak pernah menebak Kontrak Ditandatangani. dokumen.ts:175-192 mencoba ulang metadata sekali; hasilnya dilaporkan lewat toast PanelDokumenBaru.tsx:80-81. Lencana 'Jenis belum diisi' membuka Ubah jenis (:269-275). Menu Ubah jenis dan Hapus (:298-299) memakai alasan wajib yang dicatat (dokumen.ts:243-268). Aturan izinDokumen jenisBerkas.ts:250-267: Kontrak Ditandatangani pada kontrak Aktif hanya oleh Admin.",
+        "kurang": "Kode lengkap. Yang tersisa langkah manual: pilihan Choice baru di kolom JenisDokumen SharePoint (bagian S0), tidak bisa diverifikasi dari kode."
+      },
+      {
+        "id": "U19",
+        "judul": "Aktivasi terpandu: wajib unggah kontrak bertanda tangan dan tautan 'Kontrak final'",
+        "status": "sebagian",
+        "bukti": "UnggahAktivasi.tsx dirender di ModalAksi DetailKontrak.tsx:683. Unggahnya PDF berjenis Kontrak Ditandatangani, dan tombol nonaktif sampai berkas siap (:717). Admin bisa melewati dengan alasan minimal 15 karakter yang dicatat (:586-587); Legal hanya diberi peringatan. simpanKontrakFinal (dokumen.ts:98) menyimpan lewat PATCH terpisah; bila gagal, muncul toast (DetailKontrak.tsx:590-593). Tombol 'Unduh kontrak final' ada di hero (:396-399).",
+        "kurang": "Belum ada isian nilai final yang menimpa NilaiKontrak dengan catatan 'dari X ke Y' (DataFinal :502 hanya nomor dan tanggal). Kolom KontrakFinal tidak ada di ekspor CSV/Excel (KOLOM_KONTRAK ekspor.ts:118-139); hanya ada di manifest arsip ZIP (arsip.ts:75)."
+      },
+      {
+        "id": "U20",
+        "judul": "Usulan nomor kontrak resmi dan pencegahan nomor ganda",
+        "status": "sebagian",
+        "bukti": "lib/penomoran.ts berisi usulanNomorKontrak, nomor addendum {induk}/ADD-{urutan}, cekNomorGanda, peringatanFormatNomor, serta adalahGalatNomorUnik dengan PESAN_NOMOR_GANDA. Semuanya dipakai di ModalAksi DetailKontrak.tsx:548-605: data dibaca ulang setelah kosongkanCacheKontrak, dan usulan dihitung ulang bila nomor bentrok. Urutan addendum maks+1 di kontrak.ts:165-174.",
+        "kurang": "Format masih FORMAT_PENOMORAN_BAWAAN karena menunggu keputusan Legal; validasiFormatPenomoran belum dipakai dan format belum bisa diatur dari Pengaturan. Langkah 'Enforce unique values' pada NomorKontrak tidak ditulis di README maupun KEAMANAN. Legal masih bisa mengubah nomor kontrak di FormKontrak.tsx:597-599 tanpa cekNomorGanda dan tanpa peringatan format."
+      },
+      {
+        "id": "U10",
+        "judul": "Saran nama mitra, mitra otomatis dari induk, peringatan ganda, riwayat mitra",
+        "status": "selesai",
+        "bukti": "Bug isian otomatis sudah diperbaiki: di chat, mitra/mitraId/divisi terisi saat induk atau MoU dipilih (ChatAjukan.tsx:1159-1160, :1233-1235, :544-551); di formulir lewat isiDariAcuan (FormKontrak.tsx:208-248). lib/mitra.ts: kunciMitra membedakan PT dan CV, cariMitraSerupa maksimal 3. Saran tampil sebagai DatalistMitra di formulir (FormKontrak.tsx:541) dan ChipSaranMitra di chat (ChatAjukan.tsx:1200). PeringatanGanda hanya muncul di fase ringkasan (ChatAjukan.tsx:790-796); tawaran addendum di lib/duplikat.ts:114-131 hanya bila judul menyebut perpanjangan/addendum atau kontrak berakhir dalam 90 hari. PanelRiwayatMitra khusus Legal di Ruang Admin (DetailKontrak.tsx:277-280, PanelPihak.tsx:360-369).",
+        "kurang": ""
+      },
+      {
+        "id": "K05",
+        "judul": "Halaman Pengaturan lite (ambang, SLA, alamat bersama, kemudian divisi)",
+        "status": "sebagian",
+        "bukti": "List Pengaturan dipakai (config.ts:21 LIST_ID.pengaturan). services/pengaturan.ts: cache sekali per sesi, simpanPengaturan dengan validasi, Log Admin. lib/pengaturan.ts: PENGATURAN_BAWAAN (hariPeringatan 90/60/30/7/0, sla, hariKerja, alamatGrupLegal, pengirimEmail, tautanTeams, ambangEskalasi) dan validasi. PengaturanProvider membungkus rute (App.tsx:64). Rute /pengaturan khusus Admin (App.tsx:82) ke pages/Pengaturan.tsx. Nilai dipakai aplikasi: horizonPeringatan di Dashboard/DaftarKontrak/DetailKontrak, levelSlaPengaturan, alamatGrupLegal di notifikasi.ts:49. Ada uji scripts/uji-pengaturan.ts. docs/KEAMANAN.md:56 menulis izin Read untuk Members.",
+        "kurang": "Flow Power Automate TIDAK membaca nilai Pengaturan, kecuali emailUji. pengingat.mjs:89 menulis ambang [90,60,30,7,0] dan :143 [30,14,7,0] sebagai angka tetap. agenda.mjs:38 menulis SLA sebagai JSON tetap. alamatGrupLegal, ambangEskalasi, dan hariPeringatan tidak dipakai flow mana pun. Padahal README.md:140 dan subjudul halaman Pengaturan mengklaim flow membacanya, jadi mengubah angka di halaman tidak mengubah email terjadwal. Bawaan jaminanPeringatan [30,14,7] juga berbeda dari flow [30,14,7,0]. Tahap divisi (daftar divisi dengan flag aktif/boleh mengajukan) belum dibuat: DAFTAR_DIVISI masih konstanta di types.ts:43."
+      },
+      {
+        "id": "U23a",
+        "judul": "Fondasi notifikasi di aplikasi: penerima, antrean, dan 'Dibuat' dicatat setelah unggahan",
+        "status": "sebagian",
+        "bukti": "Arsitekturnya diganti ke kotak keluar: services/notifikasi.ts (antrikanEmail, kabarkanPengajuanBaru, kabarkanPerubahanStatus, kabarkanPenugasan) dipanggil dari buatKontrak, jalankanAksi, dan tetapkanPic (services/kontrak.ts). Posisi antrean (antreanLegal/posisiAntrean) dimasukkan ke email. Aturan penerima: Legal/Admin aktif tanpa pengaju, Perlu Revisi dan Ditolak ke pengaju, aksi pengaju ke PIC atau tim Legal.",
+        "kurang": "Belum ada fungsi murni penerimaNotifikasi di lib/alur.ts dan belum ada uji tabelnya (scripts/ tidak punya uji notifikasi). Logikanya async dan menempel ke Graph di services. Penugasan hanya mengabari PIC baru, PIC lama tidak. catatAktivitas (services/aktivitas.ts) tidak mengisi RingkasAntrean, Nilai, Prioritas, Target, atau JumlahDokumen. 'Dibuat' dan email pengajuan baru masih dibuat di dalam buatKontrak SEBELUM unggah (ChatAjukan.tsx:670-680, FormKontrak.tsx:343-346), jadi email ke Legal tidak tahu dokumennya. Belum ada coba ulang 2-3 kali. Galat antre notifikasi masih ditelan lewat console.warn (kontrak.ts:211, :352) tanpa toast. Bila catatAktivitas 'Dibuat' gagal, seluruh pengajuan dilaporkan gagal walau item sudah tersimpan."
+      },
+      {
+        "id": "U23b",
+        "judul": "Flow Power Automate email Outlook dengan HTML visual",
+        "status": "sebagian",
+        "bukti": "Flow 'Kirim email dari kotak keluar' (power-automate/alur/kirim-email.mjs) terdaftar di alur/index.mjs dan menandai Terkirim/Gagal. Templat HTML di lib/email.ts dan lib/emailKit.ts memakai tabel, inline CSS, lebar 640 px, tombol VML, warna pita sesuai status, kartu infoKontrak (nomor/judul/mitra/jenis/masuk WIB), blok 'Posisi antrean Anda', kotakCatatan, tombol ke /#/kontrak/{id} atau /#/saya/kontrak/{id}, dan esc() untuk semua teks. Halaman Notifikasi menampilkan kotak keluar. Mode uji emailUji tersedia untuk email terjadwal.",
+        "kurang": "Penerima belum divalidasi terhadap list Pengguna Kontrak maupun domain perusahaan, baik di antrikanEmail (hanya regex) maupun di flow. Belum ada versi teks biasa. Stepper di email hanya 3 langkah (emailKit.ts:143 pelacak Antri/Proses/Selesai), bukan 5 tahap. Kartu untuk pengaju tidak memuat nilai. Email dikirim dari kotak surat pemilik koneksi (SendEmailV2), belum dari shared mailbox. Ini langkah manusia dan panduannya sudah ada di KEAMANAN.md §8."
+      },
+      {
+        "id": "U23c",
+        "judul": "Kartu Teams untuk pengajuan baru (opsional)",
+        "status": "belum",
+        "bukti": "Hanya ada isian tautanTeams di Pengaturan (lib/pengaturan.ts:37, Pengaturan.tsx:310). Paket teams/ hanya berisi aplikasi tab pribadi, bukan kartu notifikasi.",
+        "kurang": "Tidak ada Adaptive Card maupun flow Teams di power-automate/alur (tidak ada konektor Teams, tidak ada di index.mjs). Belum ada penanganan ?aksi=ambil-pic (konfirmasi, khusus Legal/Admin, abaikan bila PIC sudah terisi) di DetailKontrak. Channel Teams Legal juga perlu disiapkan manusia."
+      },
+      {
+        "id": "U24",
+        "judul": "Pengingat kontrak berakhir (H-90/60/30/7/0) memperhitungkan addendum, plus tombol kalender .ics",
+        "status": "sebagian",
+        "bukti": "Tombol .ics di DetailKontrak.tsx:745-780 memakai lib/ics.ts (acara seharian, uidKontrak stabil, VALARM). Flow PengingatHarian (pengingat.mjs, terdaftar di index.mjs) berjalan harian 07.00 SE Asia Standard Time, difilter di query SharePoint (Status Aktif dan BerakhirEfektif le +90), dan mencatat PengingatTerakhir. Tautan 'Ajukan addendum' ke /#/saya/ajukan?induk= dibaca ChatAjukan.tsx:276. BerakhirEfektif diisi saat aktivasi (kontrak.ts:339) dan dihitung ulang lewat perbaruiBerakhirEfektif saat status addendum berubah (kontrak.ts:347).",
+        "kurang": "Belum ada satu fungsi sinkronkanBerakhirEfektif untuk semua jalur. ubahKontrak tidak menghitung ulang BerakhirEfektif bila Legal mengubah tanggalBerakhir kontrak Aktif lewat FormKontrak. Belum ada tombol rekonsiliasi Admin dan belum ada pengisian awal, sehingga kontrak Aktif lama yang BerakhirEfektif-nya kosong tidak pernah terjaring filter flow. Ambang ditulis tetap di flow, tidak dari Pengaturan. Pengingat belum digabung dengan rekap harian: email dikirim per kontrak, jaminan, dan kewajiban, terpisah dari Agenda pagi, sehingga PIC Legal bisa menerima dua email berbeda."
+      },
+      {
+        "id": "U03B",
+        "judul": "StatusSejak dan SLA per tahap",
+        "status": "selesai",
+        "bukti": "StatusSejak diisi di buatKontrak (kontrak.ts:195) dan jalankanAksi (kontrak.ts:333), tidak lewat formulir. Semua perubahan status (AksiMassal, FormKontrak kirim ulang) melewati jalankanAksi. lib/sla.ts dan lib/pengaturan.ts (umurTahapPengaturan, hitungHariKerja, levelSlaPengaturan) memakai angka SLA dan hari kerja dari Pengaturan. LencanaSla.tsx memberi merah hanya untuk TAHAP_LEGAL, sedangkan Perlu Revisi kuning 'menunggu pengaju'. Lencana dirender di DaftarKontrak.tsx:513/630 dan DetailKontrak.tsx:274/357. Filter ?sla=lewat|hampir|target ada di filterKerja.ts:68, dan kolom/urut 'Umur' di DaftarKontrak.tsx:160/444.",
+        "kurang": "Kecil: fallback kontrak lama hanya untuk status Diajukan (pakai tanggalDiajukan). Kontrak lama di tahap lain tanpa StatusSejak tidak punya umur atau level SLA. Hitungan hari kerja tersedia, tetapi bawaannya mati (slaPakaiHariKerja=false). Angka SLA final masih menunggu keputusan kepala Legal."
+      },
+      {
+        "id": "U25",
+        "judul": "Agenda pagi Legal dan eskalasi sempit via email",
+        "status": "sebagian",
+        "bukti": "Flow AgendaPagi (power-automate/alur/agenda.mjs, terdaftar di index.mjs) berjalan Senin-Jumat 07.30 SE Asia Standard Time. Isinya email HTML berisi KPI, antrean Diajukan (urut prioritas lalu waktu masuk), 'Sedang ditangani' dengan umur tahap, tanda LEWAT SLA, dan 'menunggu pengaju' untuk Perlu Revisi, serta 'Berakhir dalam 30 hari'. Email tidak dikirim bila semua blok kosong (kondisi Ada_agenda).",
+        "kurang": "Belum satu email per Legal/Admin: satu email dikirim ke seluruh tim (Email_tim_legal digabung) tanpa blok 'review milik sendiri'. Blok antrean berisi semua Diajukan, bukan khusus 'Diajukan tanpa PIC'. Eskalasi dua aturan sebagai blok 'Perlu perhatian' dengan sekali kirim per ambang belum ada; ambangEskalasi di Pengaturan tidak dipakai, padahal README mengklaim ada. SLA ditulis tetap di flow (agenda.mjs:38, tanpa Diajukan, hari kalender). Pagination 5000 belum ada (Get items memakai $top 500 tanpa paginationPolicy). Ringkasan Senin untuk pengaju per divisi dan kepala Legal belum dibuat."
+      },
+      {
+        "id": "U27",
+        "judul": "Sebut @nama di diskusi dan tombol 'Ingatkan' lewat flow",
+        "status": "sebagian",
+        "bukti": "lib/mention.ts: kandidatSebut (pengguna aktif yang lolos bisaLihat, tanpa Pemantau), cariPemicu, ekstrakDisebut, aturanIngatkan ('Ingatkan pengaju' untuk Legal pada Perlu Revisi, 'Tanyakan progres' untuk pengaju), penerimaIngatkan (otomatis), dan jedaIngatkan (24 jam). KotakDiskusi.tsx dirender di DetailKontrak.tsx:1029. Komentar menyimpan Disebut (aktivitas.ts) dan jenis 'Pengingat' (types.ts:173, KotakDiskusi.tsx:298). Email dikirim lewat antrikanEmail ke kotak keluar, lalu flow KirimEmail, tanpa Mail.Send.",
+        "kurang": "Batas sekali per 24 jam hanya dicek di aplikasi. Cara meminta flow ikut mengecek, tetapi kirim-email.mjs mengirim apa pun yang masuk ke list Notifikasi, jadi batas ini bisa dilewati dengan menulis langsung ke list."
+      },
+      {
+        "id": "U26",
+        "judul": "Lonceng Legal/Admin yang segar dan panel 'Untuk Anda'",
+        "status": "belum",
+        "bukti": "Yang ada hanya lonceng lama. LoncengAdmin (Layout.tsx:290) menghitung butuhTindakan dari useMuat(ambilSemuaKontrak) sekali saat dipasang. PantauProvider dengan polling 60 detik hanya aktif di Ruang Pengguna (Layout.tsx:365).",
+        "kurang": "PantauProvider belum diperluas ke Ruang Admin dan belum ada panel 'Untuk Anda' untuk Legal/Admin. Belum ada langganan pada kosongkanCacheKontrak (kontrak.ts:142 hanya mengosongkan variabel). Belum ada polling 120-180 detik untuk lonceng admin dan belum ada judul tab '(n) Kontrak WKI' (tidak ada document.title di src). Belum ada perbandingan Kontrak.diubah dengan penanda localStorage yang menyaring perubahan oleh diri sendiri, maupun kabar komentar atau dokumen baru."
+      },
+      {
+        "id": "U37A",
+        "judul": "Penjaga transisi status dan salinan antrean minimal (via Power Automate)",
+        "status": "sebagian",
+        "bukti": "Flow PengawasStatus (power-automate/alur/pengawas.mjs, terdaftar di index.mjs) memakai pemicu 'item modified' pada Kontrak. Flow membaca versi sebelumnya lewat HTTP SharePoint, memeriksa pasangan transisi terhadap ALUR (SAH, KHUSUS_LEGAL) dan peran pengubah dari list Pengguna, mencatat 'Peringatan sistem' ke Aktivitas, lalu mengirim email ke Admin lewat Outlook.",
+        "kurang": "Flow sengaja TIDAK memulihkan versi sebelumnya bila transisi tidak sah (lihat komentar pengawas.mjs:4), padahal Cara meminta pemulihan otomatis. Flow kedua yang mengisi list salinan antrean minimal (ID, status, prioritas, waktu masuk, divisi) belum ada, dan list-nya pun tidak ada di config/umum.mjs."
+      },
+      {
+        "id": "U39",
+        "judul": "Performa: grafik malas dimuat, daftar ramping, cache bersama, animasi hemat",
+        "status": "belum",
+        "bukti": "Hanya ada fondasi lama: halaman di-lazy per rute (App.tsx), dan vite.config.ts punya manualChunks untuk react, msal, dan motion saja. Cache kontrak berupa variabel modul 20 detik (kontrak.ts:140).",
+        "kurang": "recharts belum dipisah ke manualChunks dan grafik belum dimuat malas setelah KPI (Dashboard.tsx:4 dan Laporan.tsx:6 mengimpor statis). Daftar masih $expand=fields lengkap termasuk Deskripsi (kontrak.ts:148), tanpa konstanta $select bersama dariItem. Belum ada cache bersama dengan useSyncExternalStore, umur 60-120 detik, dan penyegaran saat tab aktif. Animasi layout baris tidak dimatikan di atas 30 baris (DaftarKontrak.tsx:459 layout='position' tanpa syarat)."
+      },
+      {
+        "id": "U13",
+        "judul": "Dokumen wajib per jenis kontrak dan checklist saat lanjut ke tanda tangan",
+        "status": "sebagian",
+        "bukti": "src/lib/syarat.ts (PETA_DOKUMEN, kekuranganDokumen, teksMohonLengkapi, teksSusulan, daftar checklist, ringkasSebelumTtd). PanelSyarat dirender di DetailKontrak.tsx:205-215 (bilah 'x dari y wajib' dan tombol Mohon lengkapi). PenghitungSyarat dipakai di ChatAjukan.tsx:1367 dan FormKontrak.tsx:644. Tombol 'Lanjut, sisanya menyusul' di ChatAjukan.tsx:1379, dicatat ke aktivitas di ChatAjukan.tsx:685-693. Modal Minta Revisi terisi otomatis di DetailKontrak.tsx:530. Peringatan lunak saat aktivasi di DetailKontrak.tsx:554 dan 621-625. ChecklistReviewPanel dirender di DetailKontrak.tsx:228-232, PeringatanReview ada di modal lanjut-ttd (688-692), dan ringkasannya ditulis ke catatan aktivitas (585).",
+        "kurang": "Belum ada tautan ke folder Templat Legal (tidak ditemukan di src/). Modal lanjut-ttd belum memberi peringatan dokumen wajib yang kurang; kurangAktivasi hanya dihitung untuk 'aktifkan'. Pernyataan 'sisanya menyusul' baru ada di chat, belum di formulir. Isi daftar masih 'standar awal' buatan kode dan belum disahkan Legal (butuh keputusan manusia)."
+      },
+      {
+        "id": "U06",
+        "judul": "Permintaan revisi yang menonjol: poin terstruktur, kartu revisi, Simpan dan Kirim Ulang",
+        "status": "selesai",
+        "bukti": "src/lib/revisi.ts berisi permintaanRevisiTerakhir, uraiPoin dengan fallback teks bebas, sejakRevisi, TEMPLAT_POIN, tambahPoin, dan teksTanggapan. KartuRevisi dirender di DetailKontrak.tsx:195 untuk kedua ruang. Di dalamnya ada tanggapan per poin, 'Tandai semua sudah' (KartuRevisi.tsx:208-212), dan peringatan lunak bila tidak ada dokumen baru (223-228). Chip templat ada di modal Minta Revisi (DetailKontrak.tsx:698-709). 'Simpan dan Kirim Ulang' di FormKontrak.tsx:359-392 hanya langsung terkirim bila ada dokumen baru; jika tidak, pengguna kembali ke detail dengan sorotRevisi. ringkasPerubahan mencatat nilai lama ke baru (services/kontrak.ts:286-300). Lencana Terbaru ada di PanelDokumenBaru.tsx:268.",
+        "kurang": "Fiturnya tidak kurang. Satu hal tetap harus dicek manusia: tipe kolom Pesan (multi-baris, bukan teks 255) belum dicatat sebagai prasyarat di README atau KEAMANAN."
+      },
+      {
+        "id": "U15",
+        "judul": "Versi dokumen sungguhan: unggah versi baru, riwayat versi, lencana Terbaru",
+        "status": "sebagian",
+        "bukti": "services/dokumen.ts: kirimIsi (PUT /content, upload session di atas 4 MB, galat 423) di baris 119-152, unggahVersiBaru di 320, ambilVersi dari /versions di 359, urlRiwayatVersiSharePoint di 79. PanelDokumenBaru.tsx: pengelompokan per jenis (kelompokkanDokumen) dan lencana Terbaru (268), menu 'Riwayat versi' dan 'Unggah versi baru' (296-297), ModalVersi berisi daftar versi dengan tautan buka/unduh, tautan riwayat SharePoint, dan saran Compare di Word (508-641), aktivitas 'Mengunggah versi baru ... (v3), Draft Kontrak' (531). Panel ini dirender di DetailKontrak.tsx:235. Panduan mengaktifkan versioning ada di docs/KEAMANAN.md bagian 5.",
+        "kurang": "Lampiran redline opsional di modal Minta Revisi yang disimpan sebagai versi baru belum ada; modal Minta Revisi di DetailKontrak.tsx tidak punya input berkas. Mengaktifkan versioning di library Berkas Kontrak masih harus dilakukan manusia (panduannya sudah ditulis)."
+      },
+      {
+        "id": "U16",
+        "judul": "Unduhan selalu segar, ikon per ekstensi, dan laci pratinjau PDF/gambar",
+        "status": "selesai",
+        "bukti": "Tombol Unduh mengambil downloadUrl baru lewat ambilUnduhSegar (services/dokumen.ts:272, dipanggil PanelDokumenBaru.tsx:93-106). graphBlob ada di services/dokumen.ts:284, dengan batas 25 MB (BATAS_PRATINJAU di jenisBerkas.ts:110). PratinjauDokumen.tsx memakai blob dan revokeObjectURL (58-71) serta perangkap fokus dan Escape (75-99), dipanggil dari PanelDokumenBaru.tsx:108-117 dan 229. Untuk Office, berkas di atas 25 MB, dan PDF di iOS, berkas dibuka di tab baru (modePratinjau, jenisBerkas.ts:170-176). IkonBerkas berwarna per ekstensi ada di UnggahDokumen.tsx:24. CSP frame-src blob: ada di public/.htaccess:73.",
+        "kurang": "Fitur intinya tidak kurang. Catatan kecil: label ekstensi hanya tampil lewat title dan sr-only, tidak ada lencana teks yang terlihat. graphBlob ditaruh di services/dokumen.ts, bukan di graph.ts. Belum ada bukti uji /content?format=pdf di tenant."
+      },
+      {
+        "id": "U08",
+        "judul": "Draf pengajuan otomatis dan penjaga isian (metadata saja)",
+        "status": "sebagian",
+        "bukti": "src/lib/draf.ts menyimpan draf di localStorage per email, ruang, dan sumber, dengan debounce 800 ms, TTL 7 hari, hanya nama berkas, dan validasiUlangDraf. useDrafPengajuan dan BannerDraf (dengan konfirmasi 'Mulai baru') dipakai di ChatAjukan.tsx:340 dan 775-778, serta FormKontrak.tsx:186-206 dan 419. Draf dihapus segera setelah buatKontrak berhasil (ChatAjukan.tsx:672, FormKontrak.tsx:345). Draf dihapus saat logout dan yang kedaluwarsa dibersihkan (Layout.tsx:386 dan 417). Melanjutkan draf di chat tidak memutar ulang transkrip (ChatAjukan.tsx:507-531). Pengingat 'Lampirkan ulang' memakai teksLampirkanUlang.",
+        "kurang": "Tombol 'Mulai ulang' di ringkasan chat (ChatAjukan.tsx:717-720 dan 864) langsung menghapus draf tanpa konfirmasi. Tombol 'Masuk ulang' hanya ada di layar galat saat aplikasi dibuka (App.tsx:47); galat sesi saat mengirim chat atau formulir hanya berupa teks. Tautan 'Isi lewat formulir' disembunyikan di ponsel ('hidden sm:inline-block', ChatAjukan.tsx:763). Jeda chat masih sampai 400 ms (target sekitar 350 ms, selisih kecil)."
+      },
+      {
+        "id": "U09",
+        "judul": "'Ajukan serupa': salin dari kontrak sebelumnya",
+        "status": "selesai",
+        "bukti": "src/lib/serupa.ts menyalin jenis, mitra, mata uang, dan MoU hanya bila masih Aktif. Divisi diambil dari sesi, prioritas tidak disalin, deskripsi tetap ditanyakan, judul lama jadi usulan, dan tombol disembunyikan untuk Addendum. ke.ajukanSerupa ada di RuangContext.tsx:51 dan 61. Tombol dirender di DetailKontrak.tsx:391-395 dan MonitoringSaya.tsx:364-372. ?salin dibaca di ChatAjukan.tsx:278-290 dan FormKontrak.tsx:230-240. 'Disalin dari KTR-xxxx' dicatat di aktivitas Dibuat (services/kontrak.ts:176-204).",
+        "kurang": "Fitur intinya tidak kurang. Catatan: Legal belum melihat tautan 'disalin dari' di halaman detail, karena PanelRiwayat tidak menampilkan pesan aktivitas Dibuat (DetailKontrak.tsx:1061). Hanya jalur chat yang menambah aktivitas Perubahan terpisah yang terlihat (ChatAjukan.tsx:674-678); jalur formulir tidak."
+      },
+      {
+        "id": "U12",
+        "judul": "Referensi pengadaan: proyek dan nomor PR/PO/SPK",
+        "status": "sebagian",
+        "bukti": "Kolom KodeProyek dan NomorReferensi dibaca dan ditulis di services/kontrak.ts:66-67 dan 107-108. Isian teks biasa ada di FormKontrak.tsx:575-580. Kolom ekspor CSV/Excel dengan sanitasi = + - @ ada di lib/ekspor.ts:20-25 dan 136-137. Label lama-ke-baru ada di services/kontrak.ts:245-246.",
+        "kurang": "Belum ada datalist proyek dari nilai yang sudah ada, dan belum ada pilihan 'Kantor pusat / bukan proyek'. Chat belum punya langkah proyek/referensi; nilainya dikirim kosong (ChatAjukan.tsx:656-657). Proyek dan referensi belum diwarisi dari induk atau MoU (isiDariAcuan di FormKontrak.tsx:209-212 hanya menyalin mitra dan divisi). Dialog finalisasi belum meminta NomorReferensi. Daftar Kontrak belum punya filter Proyek atau opsi 'Tanpa proyek'. Pencarian di Daftar (DaftarKontrak.tsx:123) dan Ctrl+K (PaletPerintah.tsx:99) belum mencakup nomor PO atau proyek."
+      },
+      {
+        "id": "U21",
+        "judul": "Pelacak proses tanda tangan per pihak",
+        "status": "sebagian",
+        "bukti": "src/lib/ttd.ts berisi sub-tahap dengan id stabil, status 'tidak berlaku', tanggal, catatan, dan tanggalTtdTerakhir; datanya disimpan di kolom ChecklistTtd (services/kontrak.ts:377). PanelTtd dirender di DetailKontrak.tsx:216-227: stepper untuk Legal, posisi 'Menunggu ... sejak ...' untuk pengaju, item dibaca ulang sebelum ditulis (PanelTtd.tsx:58-61), lalu dicatat ke aktivitas. ChipTtd 'TTD n/m' dipakai di DaftarKontrak.tsx:525 dan 628. Tanggal TTD diisi otomatis saat aktivasi (DetailKontrak.tsx:535 dan 673).",
+        "kurang": "Belum ada isian 'cara tanda tangan' (basah, TTE, atau e-meterai) sebagai data terstruktur; saat ini hanya bisa ditulis di catatan bebas. 'Draft Final' belum dicatat dengan nama, ukuran, dan hash SHA-256 (tidak ada crypto.subtle atau digest di src/). Chip TTD belum ada di antrean atau kartu Ruang Pengguna (Antrean.tsx, MonitoringSaya.tsx). Daftar sub-tahap masih standar awal dan belum disepakati Legal (butuh keputusan manusia)."
+      },
+      {
+        "id": "U04",
+        "judul": "Tindakan massal aman: PIC massal, Berakhir massal beralasan, dan aksi balik Admin",
+        "status": "sebagian",
+        "bukti": "AksiMassal dirender di DaftarKontrak.tsx:387. Kotak centang hanya ada di tabel desktop ('hidden md:block', baris 416 dan 462) untuk modeLegal. 'Tetapkan PIC ke...' memakai jalankanPenugasan, yang mengosongkan cache dan membaca ulang kontrak (TugaskanPic.tsx:42-44), dengan konkurensi 3 dan progres lewat toast. 'Tandai Berakhir' hanya untuk kontrak Aktif non-addendum yang lewat masa berlaku efektif (filterKerja.ts:374-391). Modalnya menyebut nomor tiap kontrak, alasan wajib, ikut mengakhiri addendum Aktif, dan memeriksa ulang aksiTersedia (AksiMassal.tsx:192-213). Tidak memakai $batch.",
+        "kurang": "Aksi Admin 'Aktifkan kembali' dengan catatan wajib belum ada. ALUR untuk Berakhir, Ditolak, dan Dibatalkan masih kosong (lib/alur.ts:55-57)."
+      },
+      {
+        "id": "U40",
+        "judul": "Aksesibilitas dan bantuan: fokus modal, combobox Ctrl+K, kontras donat, galat per isian, glosarium status",
+        "status": "belum",
+        "bukti": "Modal generik di components/ui.tsx:250-287 hanya punya listener Escape global, tanpa perangkap fokus dan tanpa mengembalikan fokus ke pemicu. PaletPerintah.tsx:153-161 hanya memakai role listbox/option dan aria-selected; input belum ber-role combobox dan belum punya aria-activedescendant atau aria-controls. Warna donat di Dashboard.tsx:32-34 masih memakai var(--wh-line) dan var(--wh-surface-raised) untuk Berakhir/Dibatalkan. LencanaStatus (ui.tsx:105-113) tidak punya ikon '?'. TanpaAkses.tsx:27-31 tidak punya tombol Minta akses. Perangkap fokus hanya ada di laci PratinjauDokumen (bagian U16).",
+        "kurang": "Hampir semua butir Cara belum dikerjakan: perangkap fokus, pengembalian fokus, dan Escape per tumpukan di Modal; pola combobox di palet; warna abu pekat untuk Berakhir/Dibatalkan (termasuk mode gelap); komponen Field bersama dengan aria-invalid dan role=alert per isian (FormKontrak hanya punya satu galat global di baris 651); glosarium status dari ALUR lewat ikon '?'; breadcrumb nomorPengajuan; 'Minta akses' lewat mailto atau flow."
+      },
+      {
+        "id": "U34",
+        "judul": "Perpanjangan otomatis dan batas keputusan (masa pemberitahuan)",
+        "status": "sebagian",
+        "bukti": "src/lib/masa.ts:70 batasKeputusan, jendelaMasa, kelompokMasa, pengingatMasa (diuji di scripts/uji-jaminan.ts:324-378); PanelMasa (src/components/PanelMasa.tsx) dirender di DetailKontrak.tsx:250 dengan form klausul Legal yang menyimpan lewat ubahKontrak; RingkasanMasa (kelompok 'Diperpanjang otomatis' terpisah) dirender di Dashboard.tsx:433; lencana 'Klausul belum diisi' di PanelMasa.tsx:82; kolom PerpanjanganOtomatis/MasaPemberitahuanHari dibaca dan ditulis di services/kontrak.ts:71-72,111-112.",
+        "kurang": "Pengingat batas keputusan belum tersambung: flow power-automate/alur/pengingat.mjs:82 hanya memakai BerakhirEfektif (90/60/30/7/0) dan tidak membaca MasaPemberitahuanHari; pengingatMasa() di masa.ts hanya dipakai skrip uji. Ubin dan daftar 'Akan berakhir' di Dashboard.tsx:119 (saringKerja) masih memasukkan kontrak auto-renew, dan email pengingat tetap menyuruh mengajukan addendum untuk kontrak auto-renew."
+      },
+      {
+        "id": "U32",
+        "judul": "Register jaminan (bank garansi) dengan pengingat",
+        "status": "selesai",
+        "bukti": "LIST_ID.jaminan dipakai di src/services/jaminan.ts:7; lib/jaminan.ts (levelJaminan, peringatanKontrak 'pendek'/'perlu-diperbarui' KUNING, peringatanAktivasi); PanelJaminan dirender di DetailKontrak.tsx:255 (Legal/Admin di Ruang Admin mengubah, pengaju melihat saat Aktif); PeringatanAktivasiJaminan nonblokir khusus Pengadaan Jasa di modal aktivasi DetailKontrak.tsx:618; halaman register src/pages/Jaminan.tsx di rute /jaminan dan menu Layout.tsx:89; pengingat 30/14/7/0 di flow harian pengingat.mjs:136 (ada di alur/index.mjs).",
+        "kurang": ""
+      },
+      {
+        "id": "U33",
+        "judul": "Kewajiban dan tonggak setelah kontrak Aktif (BAST, retensi, pelaporan)",
+        "status": "selesai",
+        "bukti": "LIST_ID.kewajiban di src/services/kewajiban.ts:8; PanelKewajiban (src/components/PanelKewajiban.tsx) dirender hanya untuk status Aktif di DetailKontrak.tsx:243-245; 'Terlambat' dihitung di klien (masa.ts terlambat/levelKewajiban); kartu 'Siap ditutup' sebagai petunjuk (siapDitutup); 'Tandai selesai' oleh Legal atau pengaju dengan unggah BAST (PanelKewajiban.tsx:88, 341-437); pengingat 7/1/0 hari di flow harian pengingat.mjs:189; tanpa persen/nominal.",
+        "kurang": ""
+      },
+      {
+        "id": "K01",
+        "judul": "Persetujuan internal berjenjang dan rujukan penandatangan berwenang",
+        "status": "belum",
+        "bukti": "Hanya kerangka: tipe Persetujuan di src/lib/types.ts:168 dan kolom Persetujuan dibaca di services/kontrak.ts:76, tetapi tidak pernah ditulis maupun ditampilkan; jenis dokumen 'Bukti Persetujuan' ada (types.ts:218, syarat.ts:111 sebagai slot bersyarat addendum). Modal 'Lanjut ke Tanda Tangan' (DetailKontrak.tsx:688-692) hanya menampilkan PeringatanReview.",
+        "kurang": "Belum ada matriks kewenangan (konfigurasi IDR) dan tampilan penyetuju/penandatangan di modal Lanjut ke Tanda Tangan, form pencatatan bukti persetujuan (memo, nama, tanggal) ke Aktivitas, penegasan 'pencatatan, bukan kontrol keras', dan Tahap 2 Power Automate Approvals. Matriks kewenangan resmi dari WKI juga belum ada (keputusan manusia)."
+      },
+      {
+        "id": "K02",
+        "judul": "Alasan penutupan dan register kasus (peringatan, sengketa, pemutusan)",
+        "status": "belum",
+        "bukti": "Hanya tipe dan pembacaan: MODE_BERAKHIR di types.ts:164, modeBerakhir/adaSengketa dibaca di services/kontrak.ts:73-74, tetapi keFields tidak pernah menulis ModeBerakhir/AdaSengketa dan tidak ada UI. Aksi 'Tandai Berakhir' (alur.ts:53) memakai ModalAksi biasa tanpa pilihan mode. LIST_ID.kasus (config.ts) tidak dipakai di mana pun; README.md:31 dan KEAMANAN.md:63 menyebut 'belum dipakai aplikasi'.",
+        "kurang": "Tahap 1: pilihan ModeBerakhir dan tanggal efektif di aksi Tandai Berakhir, tampil di detail, tabel, dan CSV/Excel. Tahap 2: layanan dan panel list Kasus Kontrak khusus Legal/Admin, penulisan flag AdaSengketa dan lencananya. Panduan izin list Kasus (Members tanpa akses, Legal Edit) sudah ditulis di KEAMANAN.md:63."
+      },
+      {
+        "id": "K03",
+        "judul": "Permintaan masukan unit lain lewat email (tanpa akses site)",
+        "status": "belum",
+        "bukti": "LIST_ID.masukan ada di src/config.ts tetapi tidak dirujuk kode mana pun; tidak ada MENUNGGU_UNIT_LAIN di src/lib/sla.ts (hanya MENUNGGU_PENGAJU di baris 12); tidak ada flow Approvals/Adaptive Card di power-automate/alur/index.mjs (hanya kirimEmail, pengingat, agenda, laporan, pengawas). KEAMANAN.md:64 menyebut 'belum dipakai aplikasi'.",
+        "kurang": "Seluruhnya: layanan dan UI pencatatan permintaan masukan oleh Legal, flow email/Adaptive Card yang menulis balik jawaban ke list, berbagi berkas per-berkas, pengurang umur tahap MENUNGGU_UNIT_LAIN di sla.ts, serta pengingat dan status Terlambat di flow harian."
+      },
+      {
+        "id": "U31",
+        "judul": "Jejak audit lama-ke-baru dan halaman Jejak Audit",
+        "status": "sebagian",
+        "bukti": "Kolom Detail [{kolom,dari,ke}] ditulis catatAktivitas (services/aktivitas.ts) dari ubahKontrak dengan format Rupiah dan tanggal Indonesia (services/kontrak.ts:218-300) dan dari tetapkanPic (kontrak.ts:313-316); ditampilkan di PanelRiwayat DetailKontrak.tsx:1062-1075 dan riwayat.txt ZIP. List Log Admin dipakai catatLogAdmin (services/pengaturan.ts:115), dipanggil hanya dari Pengaturan.tsx:141 dan :346. Panduan versioning di KEAMANAN.md bagian 5.",
+        "kurang": "jalankanAksi (kontrak.ts:341) tidak mencatat Detail untuk nomor kontrak, tanggal tanda tangan, mulai/berakhir final. Perubahan pengguna di KelolaPengguna tidak dicatat ke Log Admin, dan pelaku ditulis sebagai teks, bukan diambil dari createdBy. JSON Detail tanpa versi. Belum ada halaman Jejak Audit untuk Admin/Pemantau (tidak ada rute di App.tsx) dengan filter terindeks dan ekspor."
+      },
+      {
+        "id": "U28",
+        "judul": "Halaman Laporan: waktu siklus, putaran revisi, dan kontrak mengendap",
+        "status": "selesai",
+        "bukti": "ambilSemuaEventStatus dengan cache 60 detik (src/services/riwayatStatus.ts); modul murni src/lib/laporan.ts (hariKerjaAntara, median/persentil P90, MIN_SAMPEL, ringkasRevisi, kontrakMengendap, deretBulanan, susunLaporan:425) diuji di scripts/uji-laporan.ts; src/pages/Laporan.tsx di rute /laporan (App.tsx, menu Layout.tsx:88): filter periode, durasi per tahap median/P90 dengan sampel, putaran revisi (baris 371), daftar mengendap (baris 416), grafik bulanan (baris 321-343), ekspor Excel.",
+        "kurang": ""
+      },
+      {
+        "id": "U29B",
+        "judul": "Halaman Portofolio per divisi, jenis, mitra, dan kalender berakhir",
+        "status": "selesai",
+        "bukti": "src/lib/portofolio.ts (susunPortofolio, agregasi klien dipisah per mata uang, mitra teratas 10, kalender 12 bulan); dirender sebagai tab 'Portofolio' di Laporan.tsx:587 (TabPortofolio, ?tab=portofolio): pipeline, per divisi, per jenis, 10 mitra teratas, kalender berakhir; klik membuka /kontrak?status=Aktif&divisi=/jenis=/q= yang dibaca DaftarKontrak.tsx:90-93.",
+        "kurang": "Kecil: bulan di grafik kalender berakhir belum bisa diklik ke daftar terfilter. Konversi IDR dengan kurs manual memang opsional dan belum dibuat."
+      },
+      {
+        "id": "U30",
+        "judul": "Ekspor Excel rapi dan laporan bulan ini",
+        "status": "selesai",
+        "bukti": "src/lib/ekspor.ts: ExcelJS dimuat dinamis (import('exceljs') baris 447), lembar Kontrak dengan 'Selisih Addendum' terpisah dan Nilai Efektif berupa rumus serta tautan 'Buka', lembar Addendum, Ringkasan dengan COUNTIFS/SUMIFS plus cakupan filter dan waktu ekspor (lembarRingkasan:339), Riwayat Status; sanitasi = + - @ untuk Excel dan CSV (amankanTeks:23, selCsv). Dipakai di DaftarKontrak.tsx:226-236 (CSV dan Excel) dan tombol 'Laporan bulan ini' di Laporan.tsx:140.",
+        "kurang": ""
+      },
+      {
+        "id": "U35",
+        "judul": "Plafon pada kontrak payung dan sisa plafon",
+        "status": "selesai",
+        "bukti": "Kolom Plafon dibaca/ditulis di services/kontrak.ts:75,113; helper adalahPayung (MoU tetap payung) dan ringkasPlafon/peringatanTurunanBaru di src/lib/plafon.ts:11,52,89 (bukan lib/mou.ts, tetapi setara) memakai semua kontrak tanpa bisaLihat; BarPlafon di PanelTurunan DetailKontrak.tsx:886; isian Plafon Legal di FormKontrak.tsx:625; peringatan lunak di chat ChatAjukan.tsx:731-801 dan di formulir FormKontrak.tsx:505; diuji di scripts/uji-jaminan.ts:430-472.",
+        "kurang": ""
+      },
+      {
+        "id": "U18",
+        "judul": "Paket arsip ZIP per kontrak dan retensi lewat Purview",
+        "status": "sebagian",
+        "bukti": "src/lib/arsip.ts buatPaketArsip:157 (jszip dimuat dinamis, unduh berurutan lewat graphBlob, ringkasan.csv, riwayat.txt, progres, batas BATAS_PAKET_ARSIP 250 MB di jenisBerkas.ts:111); TombolArsip (PanelDokumenBaru.tsx:649) dirender di hero DetailKontrak.tsx:403 dan panel dokumen PanelDokumenBaru.tsx:138, khusus Legal. Panduan retensi Purview ditulis di docs/KEAMANAN.md bagian 6.",
+        "kurang": "Preset filter 'Selesai' belum ada (PRESET_KERJA di filterKerja.ts:290-298 hanya antrean-saya, tanpa-pic, lewat-target, akan-berakhir, lewat-masa). Panduan Purview masih singkat: belum menyebut label default library tanpa mode record. Label retensi sendiri harus dipasang admin M365 (butuh manusia)."
+      },
+      {
+        "id": "U17",
+        "judul": "Pencarian nama berkas dan isi dokumen dari Ctrl+K",
+        "status": "belum",
+        "bukti": "Tidak ada panggilan /search/query di src (grep kosong); src/components/PaletPerintah.tsx tidak punya grup 'Dokumen', debounce, atau pemetaan folder ke kontrak.",
+        "kurang": "Seluruhnya: uji POST /search/query, grup 'Dokumen' di palet dengan debounce 400 ms dan minimal 3 huruf, pemetaan folder ke kontrak dengan saring bisaLihat, urai sorotan tanpa innerHTML, catatan PDF pindai dan jeda indeks. Kemungkinan perlu Files.Read.All dengan admin consent (keputusan admin)."
+      },
+      {
+        "id": "U11",
+        "judul": "Identitas pihak per kontrak (NPWP, penandatangan) dan ringkasan per mitra",
+        "status": "sebagian",
+        "bukti": "Kolom NpwpMitra, AlamatMitra, PenandatanganMitra, JabatanMitra, DasarKewenangan dibaca dan ditulis di services/kontrak.ts:78-82,115-119; PanelPihak (PanelPihak.tsx:67) dirender di DetailKontrak.tsx:202: NPWP tervalidasi (mitra.ts:412 validasiNpwp), isi otomatis dari kontrak terakhir dengan mitra sama (usulanIdentitas mitra.ts:469), tombol 'Salin teks komparisi' (teksKomparisi mitra.ts:445), kontak dari master hanya untuk Legal (UU PDP); PanelRiwayatMitra di DetailKontrak.tsx:279; jenis dokumen 'Legalitas Mitra' ada di types.ts:214; diuji di scripts/uji-mitra.ts.",
+        "kurang": "Inti sudah jalan. Yang belum: satu kolom 'Pihak lain dan perannya' (tidak ada di types.ts/kontrak.ts/PanelPihak). Kebijakan data pribadi masih keputusan manusia."
+      },
+      {
+        "id": "K04",
+        "judul": "Pembuat draft kontrak dari templat .docx",
+        "status": "sebagian",
+        "bukti": "PanelDraf (src/components/PanelDraf.tsx) dirender untuk Legal di DetailKontrak.tsx:240; tombol buat draf hanya saat Review Legal (PanelDraf.tsx:49); lib/terbilang.ts dengan uji scripts/uji-terbilang.ts; library docx dimuat dinamis (templateDocx.ts:618), penanda [ISI: ...] disorot kuning (templateDocx.ts:624), unggah sebagai 'Draft v<n> ...' jenis Draft Kontrak dengan catatan aktivitas (PanelDraf.tsx:171-174).",
+        "kurang": "Pendekatannya berbeda dari Cara: draf dirakit dari kerangka bawaan di kode (templateDocx.ts, 7 jenis), bukan dari templat .docx milik Legal di subfolder _Templat library Berkas Kontrak lewat docx.patchDocument. Belum ada pembacaan templat dari SharePoint. Templat .docx bersih dengan penanda dari Legal dan uji pada templat asli masih butuh manusia."
+      },
+      {
+        "id": "K06",
+        "judul": "Pemindai klausul dan konsistensi draft berbasis aturan (tanpa AI berbayar)",
+        "status": "sebagian",
+        "bukti": "Tahap 1 ada: src/lib/ekstrak.ts (mammoth dan pdfjs-dist dimuat dinamis, worker satu asal lewat ?url, baris 87-110), CSP worker-src di public/.htaccess:73; KLAUSUL_INTI di pemindai.ts:42, pindaiDraf:336 dengan keterbacaan dan PENAFIAN 'bukan nasihat hukum' (pemindai.ts:25); parser angka/tanggal Indonesia di parserID.ts diuji scripts/uji-ekstrak.ts (137 assert); modal Pindai di PanelDraf.tsx (dirender DetailKontrak.tsx:240) dan dipakai juga di UnggahCerdas.tsx:60.",
+        "kurang": "Tahap 2 belum: tanda umum (mis. bagian kosong/penanda belum diisi) dan hasil pindai belum masuk ke checklist review U13 (ChecklistReviewPanel tidak memakai pemindai). Uji pada 20-30 sampel dokumen asli dan daftar klausul resmi dari Legal masih butuh manusia."
+      }
+    ]
+  },
+  "workflowProgress": [
+    {
+      "type": "workflow_phase",
+      "index": 1,
+      "title": "Audit"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 1,
+      "label": "audit:Tahap 1",
+      "phaseIndex": 1,
+      "phaseTitle": "Audit",
+      "agentId": "a08155bc87018278a",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1790984157661,
+      "queuedAt": 1790984157618,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Kamu mengaudit proyek React+TS di C:\\laragon\\www\\Kontrak (aplikasi Kontrak WKI, data di SharePoint lewat Graph, notifikasi lewat Power Automate yang dibangun dari kode di power-automate/alur/*.mjs). READ-ONLY: jangan mengubah, membuat, atau menghapus berkas apa pun, dan jangan menjalankan perintah yang menulis.\n\nBaca docs/PETA-JALAN.md, bagian Tahap 1. Untuk SETIAP butir berikut: S0, T1-TGL, U01, …",
+      "promptFramed": true,
+      "lastProgressAt": 1790984537642,
+      "tokens": 275357,
+      "toolCalls": 67,
+      "durationMs": 379971,
+      "resultPreview": "{\"items\":[{\"id\":\"S0\",\"judul\":\"Persiapan skema SharePoint dan pengetatan izin (satu kali)\",\"status\":\"butuh-manusia\",\"bukti\":\"Panduan izin sudah ditulis di docs/KEAMANAN.md dan ditautkan dari README.md:77-80 dan :226. Isinya: grup, tingkat izin 'Tambah Saja', izin per list (Pengguna Read, Aktivitas Tambah Saja, dst.), versioning, retensi Purview, co-owner flow. src/config.ts:11-26 sudah memuat semua…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 2,
+      "label": "audit:Tahap 2",
+      "phaseIndex": 1,
+      "phaseTitle": "Audit",
+      "agentId": "a7bd09d4fed780e25",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1790984157665,
+      "queuedAt": 1790984157618,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Kamu mengaudit proyek React+TS di C:\\laragon\\www\\Kontrak (aplikasi Kontrak WKI, data di SharePoint lewat Graph, notifikasi lewat Power Automate yang dibangun dari kode di power-automate/alur/*.mjs). READ-ONLY: jangan mengubah, membuat, atau menghapus berkas apa pun, dan jangan menjalankan perintah yang menulis.\n\nBaca docs/PETA-JALAN.md, bagian Tahap 2. Untuk SETIAP butir berikut: K05, U23a, U23b, …",
+      "promptFramed": true,
+      "lastProgressAt": 1790984474307,
+      "tokens": 211248,
+      "toolCalls": 54,
+      "durationMs": 315592,
+      "resultPreview": "{\"items\":[{\"id\":\"K05\",\"judul\":\"Halaman Pengaturan lite (ambang, SLA, alamat bersama, kemudian divisi)\",\"status\":\"sebagian\",\"bukti\":\"List Pengaturan dipakai (config.ts:21 LIST_ID.pengaturan). services/pengaturan.ts: cache sekali per sesi, simpanPengaturan dengan validasi, Log Admin. lib/pengaturan.ts: PENGATURAN_BAWAAN (hariPeringatan 90/60/30/7/0, sla, hariKerja, alamatGrupLegal, pengirimEmail, ta…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 3,
+      "label": "audit:Tahap 3",
+      "phaseIndex": 1,
+      "phaseTitle": "Audit",
+      "agentId": "a2ac776bc05d80df2",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1790984157667,
+      "queuedAt": 1790984157618,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Kamu mengaudit proyek React+TS di C:\\laragon\\www\\Kontrak (aplikasi Kontrak WKI, data di SharePoint lewat Graph, notifikasi lewat Power Automate yang dibangun dari kode di power-automate/alur/*.mjs). READ-ONLY: jangan mengubah, membuat, atau menghapus berkas apa pun, dan jangan menjalankan perintah yang menulis.\n\nBaca docs/PETA-JALAN.md, bagian Tahap 3. Untuk SETIAP butir berikut: U13, U06, U15, U1…",
+      "promptFramed": true,
+      "lastProgressAt": 1790984460051,
+      "tokens": 362104,
+      "toolCalls": 66,
+      "durationMs": 301335,
+      "resultPreview": "{\"items\":[{\"id\":\"U13\",\"judul\":\"Dokumen wajib per jenis kontrak dan checklist saat lanjut ke tanda tangan\",\"status\":\"sebagian\",\"bukti\":\"src/lib/syarat.ts (PETA_DOKUMEN, kekuranganDokumen, teksMohonLengkapi, teksSusulan, daftar checklist, ringkasSebelumTtd). PanelSyarat dirender di DetailKontrak.tsx:205-215 (bilah 'x dari y wajib' dan tombol Mohon lengkapi). PenghitungSyarat dipakai di ChatAjukan.ts…"
+    },
+    {
+      "type": "workflow_agent",
+      "index": 4,
+      "label": "audit:Tahap 4",
+      "phaseIndex": 1,
+      "phaseTitle": "Audit",
+      "agentId": "ae27b2304bf2aa6b6",
+      "model": "claude-opus-5-5",
+      "state": "done",
+      "startedAt": 1790984157671,
+      "queuedAt": 1790984157618,
+      "attempt": 1,
+      "lastToolName": "StructuredOutput",
+      "promptPreview": "Kamu mengaudit proyek React+TS di C:\\laragon\\www\\Kontrak (aplikasi Kontrak WKI, data di SharePoint lewat Graph, notifikasi lewat Power Automate yang dibangun dari kode di power-automate/alur/*.mjs). READ-ONLY: jangan mengubah, membuat, atau menghapus berkas apa pun, dan jangan menjalankan perintah yang menulis.\n\nBaca docs/PETA-JALAN.md, bagian Tahap 4. Untuk SETIAP butir berikut: U34, U32, U33, K0…",
+      "promptFramed": true,
+      "lastProgressAt": 1790984488146,
+      "tokens": 236160,
+      "toolCalls": 58,
+      "durationMs": 329429,
+      "resultPreview": "{\"items\":[{\"id\":\"U34\",\"judul\":\"Perpanjangan otomatis dan batas keputusan (masa pemberitahuan)\",\"status\":\"sebagian\",\"bukti\":\"src/lib/masa.ts:70 batasKeputusan, jendelaMasa, kelompokMasa, pengingatMasa (diuji di scripts/uji-jaminan.ts:324-378); PanelMasa (src/components/PanelMasa.tsx) dirender di DetailKontrak.tsx:250 dengan form klausul Legal yang menyimpan lewat ubahKontrak; RingkasanMasa (kelompo…"
+    }
+  ],
+  "totalTokens": 1084869,
+  "totalToolCalls": 245
+}

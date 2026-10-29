@@ -1,0 +1,518 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Token desain "Waskita Horizon" v2: Bento Grid + Soft UI.
+   Navy otoritas + teal Waskita + emas sebagai aksen. Nama --wh-* tetap sama supaya
+   Tailwind (tailwind.config.js) dan komponen lama tidak perlu diubah. */
+:root {
+  --wh-bg: #f2f5f9;
+  --wh-surface: #ffffff;
+  --wh-surface-raised: #f6f8fb;
+  --wh-line: #e3e9f0;
+  --wh-ink: #0c1b2b;
+  --wh-ink-muted: #56687a;
+  --wh-brand: #0a7f79;
+  --wh-brand-strong: #06615d;
+  --wh-brand-soft: #dcf3f0;
+  --wh-on-brand: #ffffff;
+  --wh-accent: #e5a62c;
+  --wh-accent-soft: #fdf1d3;
+  --wh-accent-ink: #7a4b00;
+  --wh-on-accent: #241600;
+  --wh-info: #2456c8;
+  --wh-info-soft: #e2ebfc;
+  --wh-success: #157a4b;
+  --wh-success-soft: #dcf3e5;
+  --wh-danger: #bd382a;
+  --wh-danger-soft: #fde6e2;
+  /* Latar tombol bahaya (gradasi ke --wh-danger-strong) dan warna tulisan di atasnya: kontras >= 4.5:1 di kedua tema. */
+  --wh-danger-strong: #9e2a1e;
+  --wh-on-danger: #ffffff;
+  /* Abu pekat untuk status akhir (Berakhir, Dibatalkan). Grafik: >= 3:1 terhadap kartu; teks pil: >= 4.5:1. */
+  --wh-abu: #4b5360;
+  --wh-abu-2: #857b72;
+  --wh-abu-soft: #eaedf1;
+  --wh-abu-ink: #39404a;
+  --wh-navy: #0b1f3a;
+  --wh-navy-2: #12305a;
+  --wh-hero: #0b2a4a;
+  --wh-on-hero: #ffffff;
+  --wh-sidebar: #0b1f3a;
+  --wh-sidebar-ink: #b9c9dc;
+  --wh-sidebar-line: rgba(255, 255, 255, 0.09);
+  --wh-shadow-card: 0 1px 2px rgba(12, 27, 43, 0.04), 0 4px 12px rgba(12, 27, 43, 0.04), 0 12px 32px rgba(12, 27, 43, 0.05);
+  --wh-shadow-pop: 0 4px 12px rgba(12, 27, 43, 0.08), 0 24px 56px rgba(12, 27, 43, 0.16);
+  --wh-glow-a: rgba(10, 127, 121, 0.16);
+  --wh-glow-b: rgba(229, 166, 44, 0.12);
+  color-scheme: light;
+}
+
+.dark {
+  --wh-bg: #07121b;
+  --wh-surface: #0e1e2c;
+  --wh-surface-raised: #132738;
+  --wh-line: #1d3346;
+  --wh-ink: #eaf1f6;
+  --wh-ink-muted: #93a9ba;
+  --wh-brand: #38c9bd;
+  --wh-brand-strong: #86e6dd;
+  --wh-brand-soft: #0e3a40;
+  --wh-on-brand: #04222a;
+  --wh-accent: #f3b846;
+  --wh-accent-soft: #3a2c10;
+  --wh-accent-ink: #f8d48f;
+  --wh-on-accent: #2a1c00;
+  --wh-info: #8fb2f7;
+  --wh-info-soft: #172b4f;
+  --wh-success: #5fd18e;
+  --wh-success-soft: #113a26;
+  --wh-danger: #ff8d7c;
+  --wh-danger-soft: #4a1f19;
+  --wh-danger-strong: #ef6f5b;
+  --wh-on-danger: #2b0a05;
+  --wh-abu: #b3bcc7;
+  --wh-abu-2: #a08f80;
+  --wh-abu-soft: #232d38;
+  --wh-abu-ink: #d3dae2;
+  --wh-navy: #061525;
+  --wh-navy-2: #0d2a4a;
+  --wh-hero: #0a2a45;
+  --wh-on-hero: #eafffc;
+  --wh-sidebar: #061525;
+  --wh-sidebar-ink: #a9bccd;
+  --wh-sidebar-line: rgba(255, 255, 255, 0.07);
+  --wh-shadow-card: 0 1px 2px rgba(0, 0, 0, 0.35), 0 8px 28px rgba(0, 0, 0, 0.28);
+  --wh-shadow-pop: 0 24px 60px rgba(0, 0, 0, 0.6);
+  --wh-glow-a: rgba(56, 201, 189, 0.1);
+  --wh-glow-b: rgba(243, 184, 70, 0.07);
+  color-scheme: dark;
+}
+
+@layer base {
+  /* Monitor lebar: seluruh antarmuka (berbasis rem) ikut membesar sedikit supaya tidak tampak
+     kecil dan lengang. Ponsel dan laptop tetap 16px. */
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Tautan jangkar tidak tertutup bilah atas yang menempel. */
+    scroll-padding-top: 5.5rem;
+  }
+  @media (min-width: 1600px) {
+    html {
+      font-size: 17px;
+    }
+  }
+  @media (min-width: 1920px) {
+    html {
+      font-size: 18px;
+    }
+  }
+  @media (min-width: 2400px) {
+    html {
+      font-size: 20px;
+    }
+  }
+  /* Ultra-wide 3440 px: sedikit lebih besar lagi; tingginya (1440 px) tetap muat karena semua ukuran berbasis rem. */
+  @media (min-width: 3000px) {
+    html {
+      font-size: 22px;
+    }
+  }
+  html,
+  body {
+    @apply bg-bg text-ink font-sans antialiased;
+  }
+  body {
+    /* Jaring pengaman: teks tanpa spasi (nomor, email, tautan) membungkus alih-alih melebarkan halaman,
+       dan halaman tidak pernah bergulir ke samping. Berlaku di body saja supaya bilah atas tetap menempel. */
+    overflow-wrap: break-word;
+    overflow-x: hidden;
+    /* Layar berlekuk (iPhone landscape) bila peramban memakai viewport-fit=cover. */
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+  }
+  /* Kontrol isian: huruf >= 16 px di layar sentuh supaya iOS Safari tidak memperbesar halaman saat fokus,
+     dan tinggi >= 44 px. !important karena kelas text-sm di tiap isian lebih spesifik daripada aturan dasar. */
+  @media (pointer: coarse) {
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="color"]),
+    select {
+      min-height: 2.75rem;
+    }
+  }
+  /* Isian tanggal: iOS Safari mengosongkan tinggi dan memusatkan nilainya bila tidak diatur; Firefox dan Chrome tetap bawaan. */
+  input[type="date"],
+  input[type="month"],
+  input[type="datetime-local"],
+  input[type="time"] {
+    min-width: 0;
+    max-width: 100%;
+  }
+  @supports (-webkit-touch-callout: none) {
+    input[type="date"],
+    input[type="month"],
+    input[type="datetime-local"],
+    input[type="time"] {
+      -webkit-appearance: none;
+      appearance: none;
+      min-height: 2.75rem;
+    }
+    input[type="date"]::-webkit-date-and-time-value,
+    input[type="month"]::-webkit-date-and-time-value,
+    input[type="datetime-local"]::-webkit-date-and-time-value,
+    input[type="time"]::-webkit-date-and-time-value {
+      text-align: left;
+      min-height: 1.5em;
+    }
+  }
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="month"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+  }
+  /* Cahaya ambient di belakang halaman: memberi kedalaman tanpa mengganggu keterbacaan. */
+  body {
+    background-image:
+      radial-gradient(900px 500px at 8% -8%, var(--wh-glow-a), transparent 60%),
+      radial-gradient(700px 420px at 98% -4%, var(--wh-glow-b), transparent 60%);
+  }
+  @media (hover: hover) and (pointer: fine) {
+    body {
+      background-attachment: fixed;
+    }
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-brand ring-offset-2 ring-offset-bg;
+  }
+  /* Di atas panel navy (sidebar, laci menu): cincin fokus putih supaya terlihat jelas, bukan teal di atas navy. */
+  .hero-bg :focus-visible {
+    --tw-ring-color: #ffffff;
+    --tw-ring-offset-color: var(--wh-navy);
+  }
+  ::selection {
+    background: var(--wh-brand-soft);
+    color: var(--wh-ink);
+  }
+}
+
+@layer components {
+  .kartu {
+    @apply rounded-[22px] border border-line bg-surface shadow-card;
+  }
+  .kartu-hover {
+    @apply transition-all duration-200 hover:-translate-y-0.5 hover:shadow-pop;
+  }
+  .input {
+    @apply w-full rounded-xl border border-line bg-surface px-3.5 py-2.5 text-sm text-ink transition-shadow placeholder:text-muted
+      focus:border-brand focus:outline-none focus:ring-4 focus:ring-brand-soft disabled:opacity-60;
+  }
+  .label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-muted;
+  }
+  /* Isian bergalat (Field memasang aria-invalid): garis dan cincin fokus merah. */
+  .input[aria-invalid="true"] {
+    @apply border-danger focus:border-danger focus:ring-danger-soft;
+  }
+  .tabel th {
+    @apply bg-raised px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted;
+  }
+  .tabel td {
+    @apply border-t border-line px-4 py-3.5 align-middle text-sm;
+  }
+}
+
+@layer utilities {
+  .judul {
+    @apply font-display font-semibold tracking-tight;
+    font-variant-numeric: lining-nums;
+  }
+  .angka {
+    @apply tabular-nums;
+    font-feature-settings: "tnum" 1;
+  }
+  /* Panel navy dengan gradasi teal dan pola titik: dipakai hero dan sidebar.
+     Cadangan warna padat dulu; gradasi color-mix hanya untuk peramban yang mendukungnya (Safari 16.2+, Chrome 111+, Firefox 113+). */
+  .hero-bg {
+    background: linear-gradient(135deg, var(--wh-navy-2), var(--wh-navy));
+  }
+  .titik-halus {
+    background-image: radial-gradient(rgba(255, 255, 255, 0.16) 1px, transparent 1px);
+    background-size: 18px 18px;
+  }
+  .kaca {
+    background: var(--wh-surface);
+  }
+  @supports (color: color-mix(in srgb, red 50%, blue)) {
+    .hero-bg {
+      background:
+        radial-gradient(900px 380px at 100% -10%, color-mix(in srgb, var(--wh-accent) 30%, transparent), transparent 60%),
+        radial-gradient(700px 360px at -5% 115%, color-mix(in srgb, var(--wh-brand) 55%, transparent), transparent 60%),
+        linear-gradient(135deg, var(--wh-navy-2), var(--wh-navy));
+    }
+    .titik-halus {
+      background-image: radial-gradient(color-mix(in srgb, #fff 16%, transparent) 1px, transparent 1px);
+    }
+    .kaca {
+      background: color-mix(in srgb, var(--wh-surface) 78%, transparent);
+    }
+  }
+  .kaca {
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    backdrop-filter: saturate(160%) blur(14px);
+  }
+  /* Latar gelap di belakang modal, palet, dan laci menu. */
+  .latar-modal {
+    background: rgba(11, 31, 58, 0.55);
+    -webkit-backdrop-filter: blur(4px);
+    backdrop-filter: blur(4px);
+  }
+  @supports (color: color-mix(in srgb, red 50%, blue)) {
+    .latar-modal {
+      background: color-mix(in srgb, var(--wh-navy) 50%, transparent);
+    }
+  }
+  /* Pendar warna di belakang layar sunyi (TanpaAkses). */
+  .pendar-brand {
+    background: rgba(10, 127, 121, 0.2);
+  }
+  .pendar-aksen {
+    background: rgba(229, 166, 44, 0.2);
+  }
+  @supports (color: color-mix(in srgb, red 50%, blue)) {
+    .pendar-brand {
+      background: color-mix(in srgb, var(--wh-brand) 20%, transparent);
+    }
+    .pendar-aksen {
+      background: color-mix(in srgb, var(--wh-accent) 20%, transparent);
+    }
+  }
+  /* Tinggi layar: dvh mengikuti bilah alamat peramban seluler; vh sebagai cadangan. */
+  .min-h-layar {
+    min-height: 100vh;
+    min-height: 100dvh;
+  }
+  .maks-h-lembar {
+    max-height: 92vh;
+    max-height: 92dvh;
+  }
+  /* Daftar hasil palet pencarian: menyusut mengikuti area layar yang terlihat (--tinggi-tampak diisi saat papan ketik muncul). */
+  .maks-h-palet {
+    max-height: min(52vh, 30rem);
+    max-height: min(calc(var(--tinggi-tampak, 100dvh) - 7.5rem), 30rem);
+  }
+  /* Panel yang menggantung di bawah bilah atas (lonceng): tidak pernah lebih tinggi daripada layar. */
+  .maks-h-panel {
+    max-height: calc(100vh - 6rem);
+    max-height: calc(100dvh - 6rem);
+  }
+  /* Teks panjang tanpa spasi (judul kontrak, email, nomor) dipotong di mana saja daripada melebarkan wadah. */
+  .teks-panjang {
+    word-break: break-word;
+    overflow-wrap: anywhere;
+  }
+  /* Gulir halaman dikunci selama modal atau laci terbuka. */
+  .kunci-gulir {
+    overflow: hidden;
+  }
+  .kilau {
+    background: linear-gradient(100deg, var(--wh-surface-raised) 30%, var(--wh-line) 50%, var(--wh-surface-raised) 70%);
+    background-size: 200% 100%;
+    animation: kilau 1.4s ease-in-out infinite;
+  }
+  .scroll-halus {
+    scrollbar-width: thin;
+    scrollbar-color: var(--wh-line) transparent;
+  }
+  /* Chrome, Edge, dan Safari lama belum memakai scrollbar-width/color. */
+  .scroll-halus::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  .scroll-halus::-webkit-scrollbar-thumb {
+    background: var(--wh-line);
+    border-radius: 8px;
+  }
+  .scroll-halus::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .teks-gradasi {
+    background: linear-gradient(120deg, var(--wh-brand), var(--wh-info));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+}
+
+@keyframes kilau {
+  from {
+    background-position: 200% 0;
+  }
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --- Efek komponen ------------------------------------------------------------ */
+@layer components {
+  /* Kilatan cahaya yang menyapu tombol saat di-hover. Hanya transform, jadi murah. */
+  .kilat {
+    @apply relative overflow-hidden;
+  }
+  .kilat::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+    transform: translateX(-120%);
+    transition: transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    pointer-events: none;
+  }
+  @media (hover: hover) {
+    .kilat:hover:not(:disabled)::after {
+      transform: translateX(120%);
+    }
+  }
+  /* Garis bawah tautan yang tumbuh dari kiri. */
+  .garis-tumbuh {
+    background-image: linear-gradient(currentColor, currentColor);
+    background-size: 0% 1.5px;
+    background-position: 0 100%;
+    background-repeat: no-repeat;
+    transition: background-size 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+  }
+  @media (hover: hover) {
+    .garis-tumbuh:hover {
+      background-size: 100% 1.5px;
+    }
+  }
+  /* Baris tabel: sorotan halus mengikuti pointer lewat variabel --mx dan --my. */
+  .sorot {
+    position: relative;
+  }
+  .sorot::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    opacity: 0;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+  }
+  @supports (color: color-mix(in srgb, red 50%, blue)) {
+    .sorot::before {
+      background: radial-gradient(360px circle at var(--mx, 50%) var(--my, 50%), color-mix(in srgb, var(--wh-brand) 12%, transparent), transparent 70%);
+    }
+  }
+  @media (hover: hover) {
+    .sorot:hover::before {
+      opacity: 1;
+    }
+  }
+}
+
+@keyframes denyut {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 40%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 6px transparent;
+  }
+}
+@keyframes ambang {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+@layer utilities {
+  .denyut {
+    animation: denyut 2s ease-in-out infinite;
+  }
+  .ambang {
+    animation: ambang 5s ease-in-out infinite;
+  }
+}
+
+/* --- Tabel lebar ------------------------------------------------------------- */
+/* Tabel yang lebih lebar daripada wadahnya digulir di dalam wadah itu sendiri (tidak melebarkan halaman).
+   Bayangan tipis di sisi yang masih ada isinya memberi isyarat "geser untuk melihat lagi". Hanya hiasan:
+   peramban tanpa :has() tetap bisa menggulir seperti biasa. */
+.overflow-x-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+@supports selector(:has(*)) {
+  .overflow-x-auto:has(> .tabel) {
+    background-image: linear-gradient(to right, var(--wh-surface), var(--wh-surface)), linear-gradient(to left, var(--wh-surface), var(--wh-surface)), linear-gradient(to right, rgba(12, 27, 43, 0.16), rgba(12, 27, 43, 0)), linear-gradient(to left, rgba(12, 27, 43, 0.16), rgba(12, 27, 43, 0));
+    background-position: left center, right center, left center, right center;
+    background-repeat: no-repeat;
+    background-size: 28px 100%, 28px 100%, 14px 100%, 14px 100%;
+    background-attachment: local, local, scroll, scroll;
+  }
+}
+
+/* --- Cadangan peramban lama ---------------------------------------------------- */
+/* Peramban tanpa satuan dvh (Safari < 15.4, Chrome < 108) membuang seluruh deklarasi tinggi berbasis dvh.
+   Kelas-kelas yang dipakai di banyak halaman diberi cadangan vh di sini. */
+@supports not (height: 100dvh) {
+  .h-\[100dvh\] {
+    height: 100vh;
+  }
+  .h-\[86dvh\] {
+    height: 86vh;
+  }
+  .h-\[80dvh\] {
+    height: 80vh;
+  }
+  .min-h-\[100dvh\] {
+    min-height: 100vh;
+  }
+  .max-h-\[38dvh\] {
+    max-height: 38vh;
+  }
+  .max-h-\[45dvh\] {
+    max-height: 45vh;
+  }
+}
+
+/* --- Peralihan tema terang/gelap (lihat hooks/useTema.ts) --------------------------------------------------- */
+/* View Transitions: pudar silang halaman lama ke baru. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 0.42s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+/* Cadangan untuk peramban tanpa View Transitions: warna dianimasikan sekejap, hanya properti warna. */
+html.ganti-tema,
+html.ganti-tema *,
+html.ganti-tema *::before,
+html.ganti-tema *::after {
+  transition:
+    background-color 0.4s ease,
+    border-color 0.4s ease,
+    color 0.4s ease,
+    fill 0.4s ease,
+    stroke 0.4s ease,
+    box-shadow 0.4s ease !important;
+}
+

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <!-- viewport-fit=cover: layar berlekuk memakai area penuh; jarak aman diatur lewat env(safe-area-inset-*) di styles.css dan komponen.
+         Zoom pengguna sengaja tidak dikunci (aksesibilitas). -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- Warna bilah alamat dan skema warna bawaan peramban; public/tema.js menyesuaikannya saat tema gelap dipakai. -->
+    <meta name="theme-color" content="#f2f5f9" />
+    <meta name="color-scheme" content="light" />
+    <!-- Nomor pengajuan, nomor PO, dan nilai kontrak jangan diubah Safari iOS menjadi tautan telepon. -->
+    <meta name="format-detection" content="telephone=no" />
+    <title>WiCon</title>
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700;800&family=EB+Garamond:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <!-- Tema diterapkan sebelum React dimuat. Berkas terpisah supaya CSP cukup script-src 'self'. -->
+    <script src="/tema.js"></script>
+    <!-- Pesan ramah bila peramban terlalu lama untuk membuka aplikasi (lihat isi berkas). -->
+    <script src="/peramban.js"></script>
+  </head>
+  <body>
+    <noscript>
+      <p style="max-width:28rem;margin:16px auto;padding:16px;font:15px/1.55 system-ui,sans-serif">WiCon membutuhkan JavaScript. Aktifkan JavaScript di peramban Anda, lalu muat ulang halaman ini.</p>
+    </noscript>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

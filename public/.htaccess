@@ -1,0 +1,108 @@
+# =====================================================================
+# WiCon - https://wicon.waskitainfrastruktur.co.id
+# Salin isi folder dist/ ke document root subdomain (file ini ikut tersalin).
+# Butuh modul Apache: mod_rewrite, mod_headers, mod_deflate, mod_expires, mod_mime
+# dan AllowOverride All (atau minimal FileInfo, Indexes, AuthConfig, Options) pada folder tsb.
+# =====================================================================
+
+Options -Indexes -MultiViews
+DirectoryIndex index.html
+AddDefaultCharset UTF-8
+
+# --- Tipe file ---------------------------------------------------------
+<IfModule mod_mime.c>
+  AddType application/javascript .js
+  # Worker pdf.js (pdf.worker.min-<hash>.mjs) adalah modul: tanpa tipe JavaScript yang benar,
+  # Apache mengirim application/octet-stream dan peramban menolak worker-nya.
+  AddType text/javascript .mjs
+  AddType text/css .css
+  AddType image/svg+xml .svg .svgz
+  AddType image/webp .webp
+  AddType font/woff2 .woff2
+  AddType application/manifest+json .webmanifest
+</IfModule>
+
+# --- HTTPS + SPA -------------------------------------------------------
+<IfModule mod_rewrite.c>
+  RewriteEngine On
+
+  # Paksa HTTPS. Login Microsoft (MSAL) hanya berjalan di https (kecuali localhost).
+  # Cek juga X-Forwarded-Proto bila server berada di belakang reverse proxy / load balancer.
+  RewriteCond %{HTTPS} !=on
+  RewriteCond %{HTTP:X-Forwarded-Proto} !=https
+  RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
+
+  # Jangan sentuh tantangan sertifikat (Let's Encrypt dsb.).
+  RewriteRule ^\.well-known/ - [L]
+
+  # Aplikasi memakai HashRouter (#/rute), jadi rute tidak butuh rewrite. Aturan ini hanya
+  # jaring pengaman: alamat non-file diarahkan ke index.html, kecuali berkas statis yang hilang.
+  RewriteCond %{REQUEST_FILENAME} !-f
+  RewriteCond %{REQUEST_FILENAME} !-d
+  RewriteCond %{REQUEST_URI} !\.(?:js|mjs|css|map|png|jpe?g|gif|webp|svg|ico|woff2?|ttf|txt|json|webmanifest)$ [NC]
+  RewriteRule ^ index.html [L]
+</IfModule>
+
+# --- Header keamanan ---------------------------------------------------
+<IfModule mod_headers.c>
+  Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  Header always set X-Content-Type-Options "nosniff"
+  # X-Frame-Options sengaja TIDAK dipasang: aplikasi harus bisa tampil sebagai tab di Microsoft Teams.
+  # Pembatasan siapa yang boleh membingkai aplikasi diatur lewat CSP frame-ancestors di bawah
+  # (X-Frame-Options tidak bisa mengizinkan banyak domain, dan bila ada, Teams tidak bisa memuat tab).
+  Header always unset X-Frame-Options
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+
+  # Catatan: JANGAN menambah Cross-Origin-Opener-Policy: same-origin. Login Microsoft memakai
+  # popup yang harus bisa mengirim hasilnya kembali ke jendela ini (window.opener), dan jendela
+  # login Teams (teams-auth.html) mengabari tab Teams lewat window.opener.
+
+  # Content-Security-Policy: hanya asal yang dipakai aplikasi.
+  #  - connect-src     : Microsoft Graph, login Microsoft, SharePoint (unggah dokumen lewat upload session)
+  #  - frame-src       : iframe SSO diam-diam milik MSAL (login.microsoftonline.com). 'self' wajib ada: setelah login,
+  #                      iframe itu diarahkan kembali ke alamat aplikasi ini untuk menyerahkan hasilnya.
+  #                      blob: untuk pratinjau PDF (iframe ber-URL blob:).
+  #  - worker-src      : worker pdf.js dimuat dari /assets (self); blob: untuk worker cadangan.
+  #  - img-src         : foto halaman login diambil dari portal.waskitainfrastruktur.co.id
+  #  - style/font      : Google Fonts; 'unsafe-inline' pada style dibutuhkan animasi & grafik
+  #  - frame-ancestors : aplikasi boleh dibingkai oleh dirinya sendiri dan oleh Microsoft Teams / Microsoft 365
+  #                      (Teams web & desktop, Outlook, microsoft365.com). Domain lain tetap ditolak.
+  #  - object-src      : bila pratinjau PDF tetap kosong di Chrome/Edge dan konsol menyebut object-src,
+  #                      ganti 'none' menjadi blob: (penampil PDF bawaan peramban dihitung sebagai plugin).
+  Header always set Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://portal.waskitainfrastruktur.co.id; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.sharepoint.com; frame-src 'self' blob: https://login.microsoftonline.com; worker-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self' https://login.microsoftonline.com; frame-ancestors 'self' https://teams.microsoft.com https://*.teams.microsoft.com https://teams.cloud.microsoft https://*.teams.cloud.microsoft https://*.office.com https://*.office365.com https://*.microsoft365.com https://*.cloud.microsoft"
+</IfModule>
+
+# --- Kompresi ----------------------------------------------------------
+<IfModule mod_deflate.c>
+  AddOutputFilterByType DEFLATE text/html text/css text/plain text/xml application/javascript text/javascript application/json application/manifest+json image/svg+xml font/ttf
+</IfModule>
+
+# --- Cache -------------------------------------------------------------
+# Hanya berkas bernama-hash (berubah tiap build; akhiran 8 karakter seperti main-D-f9Syx5.js) yang boleh di-cache
+# setahun. Berkas tanpa hash (peramban.js, tema.js, logo, ikon) memakai nama yang sama di setiap rilis, jadi
+# cache-nya pendek supaya perubahan sampai ke pengguna. index.html tidak boleh di-cache agar rilis baru langsung terpakai.
+<IfModule mod_expires.c>
+  ExpiresActive On
+  ExpiresByType text/html "access plus 0 seconds"
+  ExpiresDefault "access plus 1 day"
+</IfModule>
+
+<IfModule mod_headers.c>
+  # Berkas statis tanpa hash: cek ulang ke server tiap hari (ETag membuat pengecekan murah).
+  <FilesMatch "\.(?:js|mjs|css|woff2|webp|png|jpe?g|svg|ico)$">
+    Header set Cache-Control "public, max-age=86400, must-revalidate"
+  </FilesMatch>
+  # Berkas bernama-hash: aman dicache setahun.
+  <FilesMatch "-[A-Za-z0-9_-]{8}\.(?:js|mjs|css|woff2|webp|png|jpe?g|svg)$">
+    Header set Cache-Control "public, max-age=31536000, immutable"
+  </FilesMatch>
+  <FilesMatch "(?:^index\.html|^teams-auth\.html|^tema\.js)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+  </FilesMatch>
+</IfModule>
+
+# --- Berkas tersembunyi & sensitif ----------------------------------------
+<FilesMatch "^\.(?!htaccess$)|\.(?:env|log|bak|sql|map)$|^(?:package(?:-lock)?\.json|tsconfig\.json|vite\.config\.ts)$">
+  Require all denied
+</FilesMatch>

@@ -1,0 +1,292 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "kwki_sharedsharepointonline_7c2a1"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_office365": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "kwki_sharedoffice365_5f9d3"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "undefined",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "Saat_email_diantrikan": {
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetOnNewItems"
+            },
+            "parameters": {
+              "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+              "table": "989a651f-10b2-4922-9297-ca56f736579f"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "recurrence": {
+            "interval": 1,
+            "frequency": "Minute"
+          },
+          "splitOn": "@triggerOutputs()?['body/value']",
+          "metadata": {
+            "operationMetadataId": "9f2b558b-639e-4a5a-add9-d7974f6b23df"
+          },
+          "runtimeConfiguration": {
+            "concurrency": {
+              "runs": 1
+            }
+          },
+          "type": "OpenApiConnection"
+        }
+      },
+      "actions": {
+        "Daftar_alamat": {
+          "runAfter": {},
+          "type": "Compose",
+          "inputs": "@split(replace(replace(toLower(concat(coalesce(triggerOutputs()?['body/Penerima'],''),';',coalesce(triggerOutputs()?['body/Cc'],''))),',',';'),' ',''),';')"
+        },
+        "Alamat_luar": {
+          "runAfter": {
+            "Daftar_alamat": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@outputs('Daftar_alamat')",
+            "where": "@and(not(empty(item())),or(not(equals(length(split(item(),'@')),2)),not(endsWith(item(),'@waskitainfrastruktur.co.id'))))"
+          }
+        },
+        "Cek_pengingat": {
+          "runAfter": {
+            "Alamat_luar": [
+              "Succeeded"
+            ]
+          },
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@contains(string(coalesce(triggerOutputs()?['body/JenisNotif'],'')),'Pengingat')",
+                  true
+                ]
+              },
+              {
+                "equals": [
+                  "@equals(triggerOutputs()?['body/KontrakId'],null)",
+                  false
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Ambil_pengingat_terkirim": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "d95ba15c-9a10-4f52-8b31-de36680df740"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "GetItems"
+                },
+                "parameters": {
+                  "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+                  "table": "989a651f-10b2-4922-9297-ca56f736579f",
+                  "$top": 1,
+                  "$filter": "ID lt @{triggerOutputs()?['body/ID']} and ID gt @{sub(triggerOutputs()?['body/ID'],2000)} and KontrakId eq @{formatNumber(triggerOutputs()?['body/KontrakId'],'0','en-US')} and JenisNotif eq 'Pengingat' and StatusKirim eq 'Terkirim' and DikirimPada ge '@{addHours(utcNow(),-24,'yyyy-MM-ddTHH:mm:ssZ')}'"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "else": {
+            "actions": {}
+          }
+        },
+        "Penilaian": {
+          "runAfter": {
+            "Cek_pengingat": [
+              "Succeeded",
+              "Failed",
+              "TimedOut"
+            ]
+          },
+          "type": "Compose",
+          "inputs": {
+            "luar": "@join(body('Alamat_luar'),', ')",
+            "tanpaPenerima": "@empty(trim(coalesce(triggerOutputs()?['body/Penerima'],'')))",
+            "pengingatGanda": "@greater(length(coalesce(actions('Ambil_pengingat_terkirim')?['outputs']?['body']?['value'],json('[]'))),0)",
+            "cekGagal": "@equals(actions('Cek_pengingat')?['status'],'Failed')"
+          }
+        },
+        "Boleh_kirim": {
+          "runAfter": {
+            "Penilaian": [
+              "Succeeded"
+            ]
+          },
+          "type": "If",
+          "expression": {
+            "and": [
+              {
+                "equals": [
+                  "@empty(outputs('Penilaian')?['luar'])",
+                  true
+                ]
+              },
+              {
+                "equals": [
+                  "@outputs('Penilaian')?['tanpaPenerima']",
+                  false
+                ]
+              },
+              {
+                "equals": [
+                  "@outputs('Penilaian')?['pengingatGanda']",
+                  false
+                ]
+              }
+            ]
+          },
+          "actions": {
+            "Kirim_email": {
+              "runAfter": {},
+              "metadata": {
+                "operationMetadataId": "58cf53d4-2867-4b41-a30d-0bcd968c994c"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+                  "connectionName": "shared_office365",
+                  "operationId": "SendEmailV2"
+                },
+                "parameters": {
+                  "emailMessage/To": "@triggerOutputs()?['body/Penerima']",
+                  "emailMessage/Subject": "@triggerOutputs()?['body/Title']",
+                  "emailMessage/Body": "@triggerOutputs()?['body/IsiHtml']",
+                  "emailMessage/Importance": "Normal",
+                  "emailMessage/Cc": "@triggerOutputs()?['body/Cc']"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Tandai_terkirim": {
+              "runAfter": {
+                "Kirim_email": [
+                  "Succeeded"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "34def524-c5ac-43a9-ace2-5097554b6ab2"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "PatchItem"
+                },
+                "parameters": {
+                  "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+                  "table": "989a651f-10b2-4922-9297-ca56f736579f",
+                  "id": "@triggerOutputs()?['body/ID']",
+                  "item/Title": "@triggerOutputs()?['body/Title']",
+                  "item/StatusKirim/Value": "Terkirim",
+                  "item/DikirimPada": "@utcNow()",
+                  "item/Galat": "@{if(outputs('Penilaian')?['cekGagal'],'Terkirim tanpa pemeriksaan batas pengingat 24 jam karena pemeriksaannya gagal.','')}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            },
+            "Tandai_gagal": {
+              "runAfter": {
+                "Kirim_email": [
+                  "Failed",
+                  "TimedOut"
+                ]
+              },
+              "metadata": {
+                "operationMetadataId": "e52d5dea-5a06-40ff-bb93-2671cb384006"
+              },
+              "type": "OpenApiConnection",
+              "inputs": {
+                "host": {
+                  "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                  "connectionName": "shared_sharepointonline",
+                  "operationId": "PatchItem"
+                },
+                "parameters": {
+                  "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+                  "table": "989a651f-10b2-4922-9297-ca56f736579f",
+                  "id": "@triggerOutputs()?['body/ID']",
+                  "item/Title": "@triggerOutputs()?['body/Title']",
+                  "item/StatusKirim/Value": "Gagal",
+                  "item/Galat": "@{coalesce(actions('Kirim_email')?['error']?['message'], 'Email tidak dapat dikirim.')}"
+                },
+                "authentication": "@parameters('$authentication')"
+              }
+            }
+          },
+          "else": {
+            "actions": {
+              "Tandai_ditolak": {
+                "runAfter": {},
+                "metadata": {
+                  "operationMetadataId": "ad3ef5e6-9f87-4e76-8ded-543d9f352b5c"
+                },
+                "type": "OpenApiConnection",
+                "inputs": {
+                  "host": {
+                    "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+                    "connectionName": "shared_sharepointonline",
+                    "operationId": "PatchItem"
+                  },
+                  "parameters": {
+                    "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+                    "table": "989a651f-10b2-4922-9297-ca56f736579f",
+                    "id": "@triggerOutputs()?['body/ID']",
+                    "item/Title": "@triggerOutputs()?['body/Title']",
+                    "item/StatusKirim/Value": "Gagal",
+                    "item/Galat": "@{if(outputs('Penilaian')?['tanpaPenerima'],'Ditolak: tidak ada alamat penerima.',if(not(empty(outputs('Penilaian')?['luar'])),concat('Ditolak: alamat di luar @waskitainfrastruktur.co.id (',take(outputs('Penilaian')?['luar'],120),'). Email WiCon hanya untuk alamat perusahaan.'),'Ditolak: pengingat untuk kontrak ini sudah terkirim dalam 24 jam terakhir. Batasnya sekali per 24 jam per kontrak.'))}"
+                  },
+                  "authentication": "@parameters('$authentication')"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}

@@ -1,0 +1,522 @@
+{
+  "properties": {
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "kwki_sharedsharepointonline_7c2a1"
+        },
+        "api": {
+          "name": "shared_sharepointonline"
+        }
+      },
+      "shared_office365": {
+        "runtimeSource": "embedded",
+        "connection": {
+          "connectionReferenceLogicalName": "kwki_sharedoffice365_5f9d3"
+        },
+        "api": {
+          "name": "shared_office365"
+        }
+      }
+    },
+    "definition": {
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "undefined",
+      "parameters": {
+        "$connections": {
+          "defaultValue": {},
+          "type": "Object"
+        },
+        "$authentication": {
+          "defaultValue": {},
+          "type": "SecureObject"
+        }
+      },
+      "triggers": {
+        "Tiap_tanggal_1": {
+          "recurrence": {
+            "frequency": "Month",
+            "interval": 1,
+            "schedule": {
+              "hours": [
+                "7"
+              ],
+              "minutes": [
+                0
+              ],
+              "monthDays": [
+                1
+              ]
+            },
+            "timeZone": "SE Asia Standard Time"
+          },
+          "metadata": {
+            "operationMetadataId": "4113167e-209d-4a97-aa85-4e7318045989"
+          },
+          "type": "Recurrence"
+        }
+      },
+      "actions": {
+        "Periode": {
+          "runAfter": {},
+          "type": "Compose",
+          "inputs": {
+            "awal": "@{formatDateTime(startOfMonth(addToTime(convertTimeZone(utcNow(),'UTC','SE Asia Standard Time'),-1,'Month')),'yyyy-MM-dd')}",
+            "akhir": "@{formatDateTime(startOfMonth(convertTimeZone(utcNow(),'UTC','SE Asia Standard Time')),'yyyy-MM-dd')}",
+            "label": "@{formatDateTime(addToTime(convertTimeZone(utcNow(),'UTC','SE Asia Standard Time'),-1,'Month'),'MMMM yyyy','id-ID')}"
+          }
+        },
+        "Ambil_pengaturan": {
+          "runAfter": {
+            "Periode": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "ae0d4ff9-a18e-4e94-93a4-fd6d5f7f536f"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems"
+            },
+            "parameters": {
+              "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+              "table": "2b89317d-807b-4b1c-96e5-52640a58708e",
+              "$top": 500,
+              "$orderby": "ID asc"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Baris_hariPeringatan": {
+          "runAfter": {
+            "Ambil_pengaturan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_pengaturan')?['value']",
+            "where": "@equals(trim(coalesce(item()?['Title'],'')),'hariPeringatan')"
+          }
+        },
+        "Baris_alamatGrupLegal": {
+          "runAfter": {
+            "Ambil_pengaturan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_pengaturan')?['value']",
+            "where": "@equals(trim(coalesce(item()?['Title'],'')),'alamatGrupLegal')"
+          }
+        },
+        "Baris_emailUji": {
+          "runAfter": {
+            "Ambil_pengaturan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_pengaturan')?['value']",
+            "where": "@equals(trim(coalesce(item()?['Title'],'')),'emailUji')"
+          }
+        },
+        "Nilai_hariPeringatan": {
+          "runAfter": {
+            "Baris_hariPeringatan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@json(if(empty(trim(coalesce(first(body('Baris_hariPeringatan'))?['NilaiJson'],''))),'[90,60,30,7,0]',trim(coalesce(first(body('Baris_hariPeringatan'))?['NilaiJson'],''))))"
+        },
+        "Periksa_hariPeringatan": {
+          "runAfter": {
+            "Nilai_hariPeringatan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@if(and(and(startsWith(string(outputs('Nilai_hariPeringatan')),'['),equals(length(split(string(outputs('Nilai_hariPeringatan')),'[')),2),empty(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(replace(string(outputs('Nilai_hariPeringatan')),'0',''),'1',''),'2',''),'3',''),'4',''),'5',''),'6',''),'7',''),'8',''),'9',''),',',''),'.',''),'-',''),' ',''),'[',''),']',''))),greater(length(union(outputs('Nilai_hariPeringatan'),outputs('Nilai_hariPeringatan'))),0),lessOrEquals(length(union(outputs('Nilai_hariPeringatan'),outputs('Nilai_hariPeringatan'))),10),less(xpath(xml(json(concat('{\"r\":{\"t\":',string(outputs('Nilai_hariPeringatan')),'}}'))),'count(/r/t[not(number(.) = floor(number(.))) or number(.) < 0 or number(.) > 730])'),1)),union(outputs('Nilai_hariPeringatan'),outputs('Nilai_hariPeringatan')),null)"
+        },
+        "Nilai_alamatGrupLegal": {
+          "runAfter": {
+            "Baris_alamatGrupLegal": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@if(empty(trim(coalesce(first(body('Baris_alamatGrupLegal'))?['NilaiJson'],''))),'\"\"',trim(coalesce(first(body('Baris_alamatGrupLegal'))?['NilaiJson'],'')))"
+        },
+        "Periksa_alamatGrupLegal": {
+          "runAfter": {
+            "Nilai_alamatGrupLegal": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@if(and(startsWith(outputs('Nilai_alamatGrupLegal'),'\"'),endsWith(outputs('Nilai_alamatGrupLegal'),'\"'),greater(length(outputs('Nilai_alamatGrupLegal')),1),not(contains(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))),'\"')),not(contains(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))),'\\')),or(empty(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2)))))),and(equals(length(split(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),'@')),2),not(empty(first(split(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),'@')))),contains(substring(concat(last(split(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),'@')),'  '),1,max(0,sub(length(last(split(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),'@'))),2))),'.'),not(contains(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),' ')),not(contains(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),';')),not(contains(toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),','))))),toLower(trim(substring(concat(outputs('Nilai_alamatGrupLegal'),' '),1,max(0,sub(length(outputs('Nilai_alamatGrupLegal')),2))))),null)"
+        },
+        "Pengaturan": {
+          "runAfter": {
+            "Periksa_hariPeringatan": [
+              "Succeeded",
+              "Failed",
+              "Skipped",
+              "TimedOut"
+            ],
+            "Periksa_alamatGrupLegal": [
+              "Succeeded",
+              "Failed",
+              "Skipped",
+              "TimedOut"
+            ]
+          },
+          "type": "Compose",
+          "inputs": {
+            "hariPeringatan": "@coalesce(actions('Periksa_hariPeringatan')?['outputs'],json('[90,60,30,7,0]'))",
+            "alamatGrupLegal": "@coalesce(actions('Periksa_alamatGrupLegal')?['outputs'],'')"
+          }
+        },
+        "Email_uji": {
+          "runAfter": {
+            "Pengaturan": [
+              "Succeeded"
+            ],
+            "Baris_emailUji": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@trim(replace(string(coalesce(first(body('Baris_emailUji'))?['NilaiJson'],'')),'\"',''))"
+        },
+        "Batas_berakhir": {
+          "runAfter": {
+            "Email_uji": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": {
+            "hari": "@max(outputs('Pengaturan')?['hariPeringatan'])",
+            "tanggal": "@{addDays(convertTimeZone(utcNow(),'UTC','SE Asia Standard Time'),max(outputs('Pengaturan')?['hariPeringatan']),'yyyy-MM-dd')}"
+          }
+        },
+        "Ambil_penerima": {
+          "runAfter": {
+            "Batas_berakhir": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "3d8f398a-66f6-4f3f-bf47-cc7de15c1ebe"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems"
+            },
+            "parameters": {
+              "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+              "table": "8ddfa9ba-0fa4-407a-8017-78d4c41c1fdb",
+              "$top": 500,
+              "$filter": "Aktif eq 1 and (Peran eq 'Admin' or Peran eq 'Legal' or Peran eq 'Pemantau')"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Penerima_legal": {
+          "runAfter": {
+            "Ambil_penerima": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_penerima')?['value']",
+            "where": "@or(equals(item()?['Peran']?['Value'],'Admin'),equals(item()?['Peran']?['Value'],'Legal'))"
+          }
+        },
+        "Penerima_pemantau": {
+          "runAfter": {
+            "Penerima_legal": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_penerima')?['value']",
+            "where": "@equals(item()?['Peran']?['Value'],'Pemantau')"
+          }
+        },
+        "Email_legal": {
+          "runAfter": {
+            "Penerima_pemantau": [
+              "Succeeded"
+            ]
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@body('Penerima_legal')",
+            "select": "@toLower(trim(coalesce(item()?['Email'],'')))"
+          }
+        },
+        "Email_pemantau": {
+          "runAfter": {
+            "Email_legal": [
+              "Succeeded"
+            ]
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@body('Penerima_pemantau')",
+            "select": "@toLower(trim(coalesce(item()?['Email'],'')))"
+          }
+        },
+        "Email_terpilih": {
+          "runAfter": {
+            "Email_pemantau": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@union(if(empty(outputs('Pengaturan')?['alamatGrupLegal']),body('Email_legal'),createArray(outputs('Pengaturan')?['alamatGrupLegal'])),body('Email_pemantau'))",
+            "where": "@not(empty(item()))"
+          }
+        },
+        "Email_penerima": {
+          "runAfter": {
+            "Email_terpilih": [
+              "Succeeded"
+            ]
+          },
+          "type": "Compose",
+          "inputs": "@coalesce(if(empty(outputs('Email_uji')),null,outputs('Email_uji')),if(empty(join(union(body('Email_terpilih'),body('Email_terpilih')),';')),null,join(union(body('Email_terpilih'),body('Email_terpilih')),';')),'adminapp@waskitainfrastruktur.co.id')"
+        },
+        "Ambil_semua": {
+          "runAfter": {
+            "Email_penerima": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "02bb29af-f728-49f1-a24b-aef48bed3511"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "GetItems"
+            },
+            "parameters": {
+              "dataset": "https://waskitainfra.sharepoint.com/sites/KontrakWKI",
+              "table": "0288609d-15ba-4e92-8afb-a2e4d491dc3a",
+              "$top": 5000,
+              "$filter": "Diarsipkan ne 1"
+            },
+            "authentication": "@parameters('$authentication')"
+          },
+          "runtimeConfiguration": {
+            "paginationPolicy": {
+              "minimumItemCount": 5000
+            }
+          }
+        },
+        "Status_Diajukan": {
+          "runAfter": {
+            "Ambil_semua": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_semua')?['value']",
+            "where": "@equals(item()?['Status']?['Value'],'Diajukan')"
+          }
+        },
+        "Status_Review_Legal": {
+          "runAfter": {
+            "Status_Diajukan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_semua')?['value']",
+            "where": "@equals(item()?['Status']?['Value'],'Review Legal')"
+          }
+        },
+        "Status_Perlu_Revisi": {
+          "runAfter": {
+            "Status_Review_Legal": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_semua')?['value']",
+            "where": "@equals(item()?['Status']?['Value'],'Perlu Revisi')"
+          }
+        },
+        "Status_Proses_Tanda_Tangan": {
+          "runAfter": {
+            "Status_Perlu_Revisi": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_semua')?['value']",
+            "where": "@equals(item()?['Status']?['Value'],'Proses Tanda Tangan')"
+          }
+        },
+        "Status_Aktif": {
+          "runAfter": {
+            "Status_Proses_Tanda_Tangan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_semua')?['value']",
+            "where": "@equals(item()?['Status']?['Value'],'Aktif')"
+          }
+        },
+        "Status_Berakhir": {
+          "runAfter": {
+            "Status_Aktif": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_semua')?['value']",
+            "where": "@equals(item()?['Status']?['Value'],'Berakhir')"
+          }
+        },
+        "Status_Ditolak": {
+          "runAfter": {
+            "Status_Berakhir": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_semua')?['value']",
+            "where": "@equals(item()?['Status']?['Value'],'Ditolak')"
+          }
+        },
+        "Status_Dibatalkan": {
+          "runAfter": {
+            "Status_Ditolak": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_semua')?['value']",
+            "where": "@equals(item()?['Status']?['Value'],'Dibatalkan')"
+          }
+        },
+        "Masuk_bulan_lalu": {
+          "runAfter": {
+            "Status_Dibatalkan": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_semua')?['value']",
+            "where": "@and(greaterOrEquals(convertTimeZone(coalesce(item()?['TanggalDiajukan'],item()?['Created']),'UTC','SE Asia Standard Time','yyyy-MM-dd'),outputs('Periode')?['awal']),less(convertTimeZone(coalesce(item()?['TanggalDiajukan'],item()?['Created']),'UTC','SE Asia Standard Time','yyyy-MM-dd'),outputs('Periode')?['akhir']))"
+          }
+        },
+        "Aktif_bulan_lalu": {
+          "runAfter": {
+            "Masuk_bulan_lalu": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Ambil_semua')?['value']",
+            "where": "@and(not(empty(item()?['TanggalTandaTangan'])),greaterOrEquals(convertTimeZone(coalesce(item()?['TanggalTandaTangan'],'1900-01-01T00:00:00Z'),'UTC','SE Asia Standard Time','yyyy-MM-dd'),outputs('Periode')?['awal']),less(convertTimeZone(coalesce(item()?['TanggalTandaTangan'],'1900-01-01T00:00:00Z'),'UTC','SE Asia Standard Time','yyyy-MM-dd'),outputs('Periode')?['akhir']))"
+          }
+        },
+        "Akan_berakhir": {
+          "runAfter": {
+            "Aktif_bulan_lalu": [
+              "Succeeded"
+            ]
+          },
+          "type": "Query",
+          "inputs": {
+            "from": "@body('Status_Aktif')",
+            "where": "@and(not(and(equals(item()?['JenisKontrak']?['Value'],'Addendum / Amandemen'),not(equals(item()?['KontrakIndukId'],null)))),not(equals(coalesce(item()?['BerakhirEfektif'],item()?['TanggalBerakhir']),null)),lessOrEquals(convertTimeZone(coalesce(coalesce(item()?['BerakhirEfektif'],item()?['TanggalBerakhir']),'2999-01-01T00:00:00Z'),'UTC','SE Asia Standard Time','yyyy-MM-dd'),outputs('Batas_berakhir')?['tanggal']))"
+          }
+        },
+        "Baris_aktif": {
+          "runAfter": {
+            "Akan_berakhir": [
+              "Succeeded"
+            ]
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@body('Aktif_bulan_lalu')",
+            "select": "<tr><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;\"><a href=\"https://wicon.waskitainfrastruktur.co.id/#/kontrak/@{item()?['ID']}\" style=\"color:#1f2a37;font-weight:700;text-decoration:none;\">@{replace(replace(replace(string(coalesce(item()?['Title'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')}</a><div style=\"font-size:12px;color:#64748b;\">@{replace(replace(replace(string(coalesce(item()?['NamaMitra'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')} · @{item()?['DivisiPengaju']?['Value']}@{if(equals(item()?['PerpanjanganOtomatis'],true),' · diperpanjang otomatis','')}</div></td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:150px;text-align:right;white-space:nowrap;\">@{if(equals(item()?['NilaiKontrak'],null),'Tanpa nilai',concat(item()?['MataUang']?['Value'],' ',formatNumber(coalesce(item()?['NilaiKontrak'],0),'N0','id-ID')))}</td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:100px;text-align:right;white-space:nowrap;\"><span style=\"color:#64748b;font-size:11px;\">ditandatangani</span><br>@{formatDateTime(convertTimeZone(coalesce(item()?['TanggalTandaTangan'],'1900-01-01T00:00:00Z'),'UTC','SE Asia Standard Time'),'d MMM yyyy','id-ID')}</td></tr>"
+          }
+        },
+        "Baris_berakhir": {
+          "runAfter": {
+            "Baris_aktif": [
+              "Succeeded"
+            ]
+          },
+          "type": "Select",
+          "inputs": {
+            "from": "@body('Akan_berakhir')",
+            "select": "<tr><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;\"><a href=\"https://wicon.waskitainfrastruktur.co.id/#/kontrak/@{item()?['ID']}\" style=\"color:#1f2a37;font-weight:700;text-decoration:none;\">@{replace(replace(replace(string(coalesce(item()?['Title'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')}</a><div style=\"font-size:12px;color:#64748b;\">@{replace(replace(replace(string(coalesce(item()?['NamaMitra'],'')),'&','&amp;'),'<','&lt;'),'>','&gt;')} · @{item()?['DivisiPengaju']?['Value']}@{if(equals(item()?['PerpanjanganOtomatis'],true),' · diperpanjang otomatis','')}</div></td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:150px;text-align:right;white-space:nowrap;\">@{if(equals(item()?['NilaiKontrak'],null),'Tanpa nilai',concat(item()?['MataUang']?['Value'],' ',formatNumber(coalesce(item()?['NilaiKontrak'],0),'N0','id-ID')))}</td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:100px;text-align:right;white-space:nowrap;\"><span style=\"color:#64748b;font-size:11px;\">berakhir</span><br>@{formatDateTime(convertTimeZone(coalesce(coalesce(item()?['BerakhirEfektif'],item()?['TanggalBerakhir']),'1900-01-01T00:00:00Z'),'UTC','SE Asia Standard Time'),'d MMM yyyy','id-ID')}</td></tr>"
+          }
+        },
+        "Kirim_laporan": {
+          "runAfter": {
+            "Baris_berakhir": [
+              "Succeeded"
+            ]
+          },
+          "metadata": {
+            "operationMetadataId": "fafcdb19-b6f0-4abe-a8a6-4153dff2e39e"
+          },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_office365",
+              "connectionName": "shared_office365",
+              "operationId": "SendEmailV2"
+            },
+            "parameters": {
+              "emailMessage/To": "@outputs('Email_penerima')",
+              "emailMessage/Subject": "@{if(empty(outputs('Email_uji')),'','[UJI] ')}[WiCon] Laporan bulanan @{outputs('Periode')?['label']}",
+              "emailMessage/Body": "<!DOCTYPE html><html lang=\"id\" xmlns:v=\"urn:schemas-microsoft-com:vml\" xmlns:o=\"urn:schemas-microsoft-com:office:office\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><meta name=\"color-scheme\" content=\"light only\"><meta name=\"supported-color-schemes\" content=\"light only\"><title>Laporan kontrak @{outputs('Periode')?['label']}</title><!--[if mso]><xml><o:OfficeDocumentSettings><o:AllowPNG/><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml><![endif]--><style>body{margin:0;padding:0;width:100%!important;-webkit-text-size-adjust:100%;}table{border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;}a{color:#0a7f79;}@media only screen and (max-width:640px){.lebar{width:100%!important;}}</style></head><body style=\"margin:0;padding:0;background-color:#f2f5f9;\" bgcolor=\"#f2f5f9\"><div style=\"display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:#f2f5f9;\">@{length(body('Masuk_bulan_lalu'))} pengajuan baru, @{length(body('Aktif_bulan_lalu'))} kontrak berlaku, @{length(body('Status_Diajukan'))} di antrean.&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" bgcolor=\"#f2f5f9\" style=\"background-color:#f2f5f9;\"><tr><td align=\"center\" style=\"padding:24px 12px;\"><table role=\"presentation\" class=\"lebar\" width=\"640\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"width:640px;max-width:640px;\"><tr><td bgcolor=\"#0b1f3a\" style=\"background-color:#0b1f3a;border-radius:14px 14px 0 0;padding:22px 32px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td valign=\"middle\" width=\"44\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"40\" height=\"40\" align=\"center\" valign=\"middle\" bgcolor=\"#0a7f79\" style=\"background-color:#0a7f79;border-radius:10px;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:40px;font-weight:700;color:#ffffff;\">W</td></tr></table></td><td valign=\"middle\" style=\"padding-left:12px;font-family:Georgia,'Times New Roman',serif;font-size:22px;line-height:26px;color:#ffffff;font-weight:700;\">WiCon<div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:600;color:#9db4d3;letter-spacing:1.2px;text-transform:uppercase;\">Contract Management &amp; Dashboard</div></td></tr></table></td></tr><tr><td height=\"5\" bgcolor=\"#0a7f79\" style=\"background-color:#0a7f79;font-size:0;line-height:0;\">&nbsp;</td></tr><tr><td bgcolor=\"#ffffff\" style=\"background-color:#ffffff;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td style=\"padding:28px 32px 0 32px;\"><div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;font-weight:800;color:#0a7f79;text-transform:uppercase;letter-spacing:1px;\">Laporan bulanan</div><div style=\"font-family:Georgia,'Times New Roman',serif;font-size:28px;line-height:34px;color:#0b1f3a;font-weight:700;padding-top:4px;\">Laporan kontrak @{outputs('Periode')?['label']}</div></td></tr><tr><td style=\"padding:14px 32px 0 32px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:15px;line-height:24px;color:#1f2a37;\">Ringkasan kontrak untuk periode <strong>@{outputs('Periode')?['label']}</strong>, dibuat otomatis oleh WiCon.</td></tr><tr><td style=\"padding:18px 28px 0 28px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"33%\" align=\"center\" style=\"padding:0 4px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td align=\"center\" bgcolor=\"#f8fafc\" style=\"background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 6px;\"><div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:30px;line-height:34px;font-weight:800;color:#e5a62c;\">@{length(body('Masuk_bulan_lalu'))}</div><div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;\">Pengajuan baru</div></td></tr></table></td><td width=\"33%\" align=\"center\" style=\"padding:0 4px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td align=\"center\" bgcolor=\"#f8fafc\" style=\"background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 6px;\"><div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:30px;line-height:34px;font-weight:800;color:#15803d;\">@{length(body('Aktif_bulan_lalu'))}</div><div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;\">Kontrak berlaku</div></td></tr></table></td><td width=\"33%\" align=\"center\" style=\"padding:0 4px;\"><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td align=\"center\" bgcolor=\"#f8fafc\" style=\"background-color:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:14px 6px;\"><div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:30px;line-height:34px;font-weight:800;color:#0a7f79;\">@{length(body('Status_Diajukan'))}</div><div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.5px;\">Antrean sekarang</div></td></tr></table></td></tr></table></td></tr><tr><td style=\"padding:22px 32px 0 32px;\"><div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;font-weight:800;color:#0a7f79;text-transform:uppercase;letter-spacing:0.8px;padding-bottom:10px;\">Sebaran status saat ini</div><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border:1px solid #e2e8f0;border-radius:10px;\"><tr><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:170px;\"><span style=\"display:inline-block;width:10px;height:10px;border-radius:5px;background-color:#64748b;\"></span>&nbsp;Diajukan</td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"@{if(equals(length(body('Ambil_semua')?['value']),0),0,max(2,div(mul(length(body('Status_Diajukan')),300),length(body('Ambil_semua')?['value']))))}\" height=\"10\" bgcolor=\"#64748b\" style=\"background-color:#64748b;font-size:0;line-height:0;\">&nbsp;</td></tr></table></td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:50px;text-align:right;\"><strong>@{length(body('Status_Diajukan'))}</strong></td></tr><tr><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:170px;\"><span style=\"display:inline-block;width:10px;height:10px;border-radius:5px;background-color:#2563eb;\"></span>&nbsp;Review Legal</td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"@{if(equals(length(body('Ambil_semua')?['value']),0),0,max(2,div(mul(length(body('Status_Review_Legal')),300),length(body('Ambil_semua')?['value']))))}\" height=\"10\" bgcolor=\"#2563eb\" style=\"background-color:#2563eb;font-size:0;line-height:0;\">&nbsp;</td></tr></table></td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:50px;text-align:right;\"><strong>@{length(body('Status_Review_Legal'))}</strong></td></tr><tr><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:170px;\"><span style=\"display:inline-block;width:10px;height:10px;border-radius:5px;background-color:#e5a62c;\"></span>&nbsp;Perlu Revisi</td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"@{if(equals(length(body('Ambil_semua')?['value']),0),0,max(2,div(mul(length(body('Status_Perlu_Revisi')),300),length(body('Ambil_semua')?['value']))))}\" height=\"10\" bgcolor=\"#e5a62c\" style=\"background-color:#e5a62c;font-size:0;line-height:0;\">&nbsp;</td></tr></table></td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:50px;text-align:right;\"><strong>@{length(body('Status_Perlu_Revisi'))}</strong></td></tr><tr><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:170px;\"><span style=\"display:inline-block;width:10px;height:10px;border-radius:5px;background-color:#0a7f79;\"></span>&nbsp;Proses Tanda Tangan</td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"@{if(equals(length(body('Ambil_semua')?['value']),0),0,max(2,div(mul(length(body('Status_Proses_Tanda_Tangan')),300),length(body('Ambil_semua')?['value']))))}\" height=\"10\" bgcolor=\"#0a7f79\" style=\"background-color:#0a7f79;font-size:0;line-height:0;\">&nbsp;</td></tr></table></td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:50px;text-align:right;\"><strong>@{length(body('Status_Proses_Tanda_Tangan'))}</strong></td></tr><tr><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:170px;\"><span style=\"display:inline-block;width:10px;height:10px;border-radius:5px;background-color:#15803d;\"></span>&nbsp;Aktif</td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"@{if(equals(length(body('Ambil_semua')?['value']),0),0,max(2,div(mul(length(body('Status_Aktif')),300),length(body('Ambil_semua')?['value']))))}\" height=\"10\" bgcolor=\"#15803d\" style=\"background-color:#15803d;font-size:0;line-height:0;\">&nbsp;</td></tr></table></td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:50px;text-align:right;\"><strong>@{length(body('Status_Aktif'))}</strong></td></tr><tr><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:170px;\"><span style=\"display:inline-block;width:10px;height:10px;border-radius:5px;background-color:#94a3b8;\"></span>&nbsp;Berakhir</td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"@{if(equals(length(body('Ambil_semua')?['value']),0),0,max(2,div(mul(length(body('Status_Berakhir')),300),length(body('Ambil_semua')?['value']))))}\" height=\"10\" bgcolor=\"#94a3b8\" style=\"background-color:#94a3b8;font-size:0;line-height:0;\">&nbsp;</td></tr></table></td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:50px;text-align:right;\"><strong>@{length(body('Status_Berakhir'))}</strong></td></tr><tr><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:170px;\"><span style=\"display:inline-block;width:10px;height:10px;border-radius:5px;background-color:#b91c1c;\"></span>&nbsp;Ditolak</td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"@{if(equals(length(body('Ambil_semua')?['value']),0),0,max(2,div(mul(length(body('Status_Ditolak')),300),length(body('Ambil_semua')?['value']))))}\" height=\"10\" bgcolor=\"#b91c1c\" style=\"background-color:#b91c1c;font-size:0;line-height:0;\">&nbsp;</td></tr></table></td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:50px;text-align:right;\"><strong>@{length(body('Status_Ditolak'))}</strong></td></tr><tr><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:170px;\"><span style=\"display:inline-block;width:10px;height:10px;border-radius:5px;background-color:#cbd5e1;\"></span>&nbsp;Dibatalkan</td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;\"><table role=\"presentation\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\"><tr><td width=\"@{if(equals(length(body('Ambil_semua')?['value']),0),0,max(2,div(mul(length(body('Status_Dibatalkan')),300),length(body('Ambil_semua')?['value']))))}\" height=\"10\" bgcolor=\"#cbd5e1\" style=\"background-color:#cbd5e1;font-size:0;line-height:0;\">&nbsp;</td></tr></table></td><td valign=\"middle\" style=\"padding:8px 10px;border-bottom:1px solid #e2e8f0;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;color:#1f2a37;width:50px;text-align:right;\"><strong>@{length(body('Status_Dibatalkan'))}</strong></td></tr></table><div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;color:#64748b;padding-top:6px;\">Total @{length(body('Ambil_semua')?['value'])} pengajuan di sistem.</div></td></tr><tr><td style=\"padding:22px 32px 0 32px;\"><div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;font-weight:800;color:#0a7f79;text-transform:uppercase;letter-spacing:0.8px;padding-bottom:10px;\">Kontrak yang berlaku bulan lalu</div><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border:1px solid #e2e8f0;border-radius:10px;\"><tr><td align=\"left\" bgcolor=\"#0b1f3a\" style=\"padding:8px 10px;background-color:#0b1f3a;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px;\">Kontrak</td><td width=\"150\" align=\"right\" bgcolor=\"#0b1f3a\" style=\"padding:8px 10px;background-color:#0b1f3a;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px;\">Nilai</td><td width=\"100\" align=\"right\" bgcolor=\"#0b1f3a\" style=\"padding:8px 10px;background-color:#0b1f3a;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px;\">Tanggal</td></tr>@{if(empty(body('Aktif_bulan_lalu')),'<tr><td colspan=\"3\" align=\"center\" style=\"padding:14px 10px;font-family:''Segoe UI'',Calibri,Arial,Helvetica,sans-serif;font-size:13px;color:#64748b;\">Tidak ada kontrak yang ditandatangani bulan lalu.</td></tr>',join(body('Baris_aktif'),''))}</table></td></tr><tr><td style=\"padding:22px 32px 0 32px;\"><div style=\"font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:13px;line-height:18px;font-weight:800;color:#0a7f79;text-transform:uppercase;letter-spacing:0.8px;padding-bottom:10px;\">Berakhir dalam @{outputs('Batas_berakhir')?['hari']} hari</div><table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" border=\"0\" style=\"border:1px solid #e2e8f0;border-radius:10px;\"><tr><td align=\"left\" bgcolor=\"#0b1f3a\" style=\"padding:8px 10px;background-color:#0b1f3a;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px;\">Kontrak</td><td width=\"150\" align=\"right\" bgcolor=\"#0b1f3a\" style=\"padding:8px 10px;background-color:#0b1f3a;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px;\">Nilai</td><td width=\"100\" align=\"right\" bgcolor=\"#0b1f3a\" style=\"padding:8px 10px;background-color:#0b1f3a;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:11px;line-height:16px;font-weight:700;color:#ffffff;text-transform:uppercase;letter-spacing:0.5px;\">Berakhir</td></tr>@{if(empty(body('Akan_berakhir')),'<tr><td colspan=\"3\" align=\"center\" style=\"padding:14px 10px;font-family:''Segoe UI'',Calibri,Arial,Helvetica,sans-serif;font-size:13px;color:#64748b;\">Tidak ada kontrak yang berakhir dalam rentang ini.</td></tr>',join(body('Baris_berakhir'),''))}</table></td></tr><tr><td style=\"padding:26px 32px 8px 32px;\"><a href=\"https://wicon.waskitainfrastruktur.co.id/#/laporan\" target=\"_blank\" style=\"display:inline-block;background-color:#0a7f79;border:2px solid #0a7f79;color:#ffffff;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:15px;line-height:20px;font-weight:700;text-decoration:none;padding:10px 26px;border-radius:8px;\">Buka laporan lengkap</a></td></tr><tr><td style=\"padding:18px 32px 28px 32px;\">&nbsp;</td></tr></table></td></tr><tr><td bgcolor=\"#f8fafc\" style=\"background-color:#f8fafc;border-top:1px solid #e2e8f0;border-radius:0 0 14px 14px;padding:16px 32px;font-family:'Segoe UI',Calibri,Arial,Helvetica,sans-serif;font-size:12px;line-height:18px;color:#64748b;\">Email otomatis dari <strong>WiCon</strong>, PT Waskita Karya Infrastruktur. Mohon tidak membalas email ini. Waktu ditampilkan dalam WIB.</td></tr></table></td></tr></table></body></html>",
+              "emailMessage/Importance": "Normal"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        }
+      }
+    },
+    "templateName": null
+  },
+  "schemaVersion": "1.0.0.0"
+}
